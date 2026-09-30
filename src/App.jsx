@@ -447,7 +447,7 @@ const BOOT_STYLES = `
   .boot-msg { color: var(--text-faint); font-size: 14px; }
 
   .auth-card { width: 340px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; }
-  .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16.5px; color: var(--text); margin-bottom: 20px; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 17.5px; color: var(--text); margin-bottom: 20px; }
   .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(232,163,61,0.15); }
 
   .auth-divider { display: flex; align-items: center; gap: 10px; margin: 18px 0; color: var(--text-faint); font-size: 11.5px; }
@@ -638,7 +638,7 @@ function QuickAddRow({ placeholder, onAdd, indent, general }) {
 
 // ---------- main component ----------
 
-export default function TaskTracker() {
+export default function TaskApp() {
   const [areas, setAreas] = useState(seedAreas);
   const [tasks, setTasks] = useState(seedTasks);
 
@@ -740,7 +740,7 @@ export default function TaskTracker() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("texto");
   const [freeText, setFreeText] = useState("");
-  const [collapsed, setCollapsed] = useState({});
+  const [collapsed, setCollapsed] = useState(() => loadLocalPrefs().collapsed || {});
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editingTitleId, setEditingTitleId] = useState(null);
   const freshTaskIdRef = useRef(null);
@@ -1393,8 +1393,8 @@ export default function TaskTracker() {
   useEffect(() => { areasRef.current = areas; }, [areas]);
 
   useEffect(() => {
-    saveLocalPrefs({ appLang, weekStartsSunday, holidayCountry, view, selectedAreaId, selectedProjectId, collapsedProjects, calView, desktopExpandedFilter });
-  }, [appLang, weekStartsSunday, holidayCountry, view, selectedAreaId, selectedProjectId, collapsedProjects, calView, desktopExpandedFilter]);
+    saveLocalPrefs({ appLang, weekStartsSunday, holidayCountry, view, selectedAreaId, selectedProjectId, collapsedProjects, collapsed, calView, desktopExpandedFilter });
+  }, [appLang, weekStartsSunday, holidayCountry, view, selectedAreaId, selectedProjectId, collapsedProjects, collapsed, calView, desktopExpandedFilter]);
 
   useEffect(() => {
     saveLocalPrefs({ areaFilterMode });
@@ -1544,7 +1544,7 @@ export default function TaskTracker() {
     if (hoy) parts.push(`${hoy} para hoy`);
     if (manana) parts.push(`${manana} para mañana`);
     try {
-      new Notification("Task Tracker", { body: `Tenés ${parts.join(", ")}.`, silent: false });
+      new Notification("Task App", { body: `Tenés ${parts.join(", ")}.`, silent: false });
     } catch { /* not available outside Electron/a notification-capable browser */ }
   }
 
@@ -2380,15 +2380,22 @@ export default function TaskTracker() {
     const q = mobileSearch.trim().toLowerCase();
     const matchedAreas = q ? areas.filter((a) => a.name.toLowerCase().includes(q)) : [];
     const matchedTasks = q ? tasks.filter((t) => t.title.toLowerCase().includes(q) || (t.note || "").toLowerCase().includes(q)) : [];
+    const favFilteredTasks = areaFilterMode === "off" ? tasks : tasks.filter((t) => {
+      const taskArea = areaMap[t.areaId];
+      const isFav = !!(taskArea && taskArea.favorite);
+      if (areaFilterMode === "solo") return isFav;
+      if (areaFilterMode === "mute") return !isFav;
+      return true;
+    });
     const filteredTasks = mobileExpandedFilter === "vencidas"
-      ? tasks.filter((t) => isOverdue(t.date, t.status) || mobileCompletingIds.has(t.id))
+      ? favFilteredTasks.filter((t) => isOverdue(t.date, t.status) || mobileCompletingIds.has(t.id))
       : mobileExpandedFilter === "pendientes"
-      ? tasks.filter((t) => t.status !== "Hecho" || mobileCompletingIds.has(t.id))
+      ? favFilteredTasks.filter((t) => t.status !== "Hecho" || mobileCompletingIds.has(t.id))
       : null;
 
     return (
       <div className="m-screen">
-        <div className="m-brand-row"><span className="brand-dot" />Task Tracker</div>
+        <div className="m-brand-row"><span className="brand-dot" />Task App</div>
         <div className="m-topbar">
           <div className="m-filters">
             <button className={`m-filter ${mobileExpandedFilter === "pendientes" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("pendientes")}>
@@ -3005,7 +3012,7 @@ export default function TaskTracker() {
       <div className="tt-root boot-screen">
         <style>{BOOT_STYLES}</style>
         <div className="auth-card">
-          <div className="brand"><span className="brand-dot" />Task Tracker</div>
+          <div className="brand"><span className="brand-dot" />Task App</div>
 
           <input
             type="email"
@@ -3054,7 +3061,7 @@ export default function TaskTracker() {
       <div className="tt-root boot-screen">
         <style>{BOOT_STYLES}</style>
         <div className="auth-card">
-          <div className="brand"><span className="brand-dot" />Task Tracker</div>
+          <div className="brand"><span className="brand-dot" />Task App</div>
           <div className="modal-text" style={{ marginBottom: 16 }}>
             Tus datos están cifrados. Ingresá tu contraseña de cifrado para desbloquearlos.
           </div>
@@ -3126,9 +3133,9 @@ export default function TaskTracker() {
           padding: 18px 14px;
           overflow-y: auto;
         }
-        .brand { display: flex; align-items: center; gap: 8px; padding: 4px 6px 20px; font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+        .brand { display: flex; align-items: center; gap: 8px; padding: 4px 6px 20px; font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
         .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(232,163,61,0.15); }
-        .side-label { font-size: 11.5px; color: var(--text-faint); font-weight: 600; letter-spacing: 0.06em; padding: 0 6px; margin: 14px 0 6px; }
+        .side-label { font-size: 12.5px; color: var(--text-faint); font-weight: 600; letter-spacing: 0.06em; padding: 0 6px; margin: 14px 0 6px; }
         .side-label-row { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 6px; padding: 0 2px 0 6px; }
         .side-label-row .side-label { margin: 0; padding: 0; }
         .side-label-action { background: none; border: none; color: var(--text-faint); cursor: pointer; padding: 3px; border-radius: 5px; display: flex; }
@@ -3227,7 +3234,7 @@ export default function TaskTracker() {
         .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
         .topbar { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--border); }
         .topbar h1 {
-          font-size: 16.5px; font-weight: 600; margin: 0; letter-spacing: -0.01em;
+          font-size: 17.5px; font-weight: 600; margin: 0; letter-spacing: -0.01em;
           width: 155px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .search-wrap {
@@ -3572,7 +3579,7 @@ export default function TaskTracker() {
 
           .m-brand-row {
             display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px; font-weight: 600;
-            font-size: 15px; letter-spacing: -0.01em; color: var(--text); border-bottom: 1px solid var(--border); flex-shrink: 0;
+            font-size: 16px; letter-spacing: -0.01em; color: var(--text); border-bottom: 1px solid var(--border); flex-shrink: 0;
           }
           .m-topbar { padding: 12px 14px 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
           .m-filters { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -3746,7 +3753,7 @@ export default function TaskTracker() {
       {/* Sidebar */}
       <div className="tt-body">
       <aside className="sidebar">
-        <div className="brand"><span className="brand-dot" />Task Tracker</div>
+        <div className="brand"><span className="brand-dot" />Task App</div>
 
         <div className="side-label">VISTAS</div>
         <div className={`side-item ${view === "lista" ? "side-item--active" : ""}`} onClick={() => setView("lista")}>

@@ -1,4 +1,4 @@
-# Task Tracker — versión web
+# Task App — versión web
 
 Versión web del task tracker, con login y conectada en vivo a Supabase
 (proyecto `task-app`). Cada usuario tiene sus propias áreas, proyectos y
