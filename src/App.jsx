@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@supabase/supabase-js";
 import {
   Search, Bell, ChevronDown, ChevronRight, ChevronLeft,
   Trash2, Loader2, Plus, Circle, CircleDot, CheckCircle2, Pencil, ListChecks,
   List as ListIcon, Flag, Calendar as CalendarIcon, ChevronsDown, ChevronsUp, X,
-  RefreshCw, Cloud, CloudOff, Download, Upload, Settings, Lock, Unlock, Info, GripVertical, EyeOff, Star,
+  RefreshCw, Cloud, CloudOff, Download, Upload, Settings, Lock, Unlock, Info, GripVertical, EyeOff, Star, Inbox, CalendarX, ArrowRight,
 } from "lucide-react";
 
 // ---------- Supabase ----------
@@ -437,33 +437,36 @@ const seedAreas = [];
 
 const BOOT_STYLES = `
   .boot-screen {
-    --bg: #0c0e11; --surface: #14171b; --surface-2: #191d22; --border: #262a30;
-    --text: #e9ebee; --text-dim: #8d94a0; --text-faint: #565d68; --amber: #e8a33d; --alta: #f0554b; --blue: #4c8dff; --good: #3ecf6a;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg); display: flex; align-items: center; justify-content: center;
-    height: 100vh; min-height: 480px; border-radius: 12px; border: 1px solid var(--border);
+    --bg: #0f1116; --surface: #161921; --surface-2: #1d212b; --border: rgba(255,255,255,0.075);
+    --text: #eceef3; --text-dim: #9ba2b0; --text-faint: #646c7a; --amber: #f2ab43; --alta: #f25f55; --blue: #5b97ff; --good: #3ecf6a;
+    font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: radial-gradient(1200px 600px at 50% -10%, rgba(242,171,67,0.07), transparent 60%), var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; height: 100dvh; min-height: 480px; color: var(--text);
   }
-  .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .mono { font-variant-numeric: tabular-nums; }
   .boot-msg { color: var(--text-faint); font-size: 14px; }
 
-  .auth-card { width: 340px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; }
+  .boot-screen * { box-sizing: border-box; }
+  .boot-screen button, .boot-screen input { font-family: inherit; }
+  .auth-card { width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 32px 30px 28px; box-shadow: 0 30px 80px -20px rgba(0,0,0,0.7); }
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 17.5px; color: var(--text); margin-bottom: 20px; }
-  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(232,163,61,0.15); }
+  .brand-dot { width: 9px; height: 9px; border-radius: 3px; background: var(--amber); box-shadow: 0 0 0 3px rgba(242,171,67,0.16); transform: rotate(45deg); }
 
   .auth-divider { display: flex; align-items: center; gap: 10px; margin: 18px 0; color: var(--text-faint); font-size: 11.5px; }
   .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
   .auth-input {
-    width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 12px; color: var(--text); font-size: 14px; outline: none; margin-bottom: 10px;
+    width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 11px 13px; color: var(--text); font-size: 14px; outline: none; margin-bottom: 10px; transition: border-color .12s;
   }
-  .auth-input:focus { border-color: rgba(232,163,61,0.5); }
+  .auth-input:focus { border-color: rgba(242,171,67,0.5); }
   .auth-error { font-size: 12.5px; color: var(--alta); margin-bottom: 10px; line-height: 1.5; }
   .auth-notice { font-size: 12.5px; color: var(--blue); margin-bottom: 10px; line-height: 1.5; }
 
   .auth-btn {
-    width: 100%; background: var(--amber); color: #1b1304; border: none; border-radius: 9px;
-    padding: 11px; font-size: 14px; font-weight: 700; cursor: pointer;
+    width: 100%; background: var(--amber); color: #1b1304; border: none; border-radius: 10px;
+    padding: 12px; font-size: 14px; font-weight: 650; cursor: pointer;
   }
   .auth-btn:hover { filter: brightness(1.08); }
   .auth-btn:disabled { opacity: 0.6; cursor: default; }
@@ -804,6 +807,14 @@ export default function TaskApp() {
   const [dayAnchor, setDayAnchor] = useState(todayISO());
   const [selectedDay, setSelectedDay] = useState(todayISO());
   const [dayQuickTitle, setDayQuickTitle] = useState("");
+  // ---- calendar interactions (drag to reschedule, popovers, inline add) ----
+  const [calDragTaskId, setCalDragTaskId] = useState(null);
+  const [calDropTarget, setCalDropTarget] = useState(null); // iso | "undated"
+  const [calPopover, setCalPopover] = useState(null); // { kind: "task"|"day", id, x, y }
+  const [calAddDay, setCalAddDay] = useState(null);
+  const [calAddText, setCalAddText] = useState("");
+  const [calUndatedOpen, setCalUndatedOpen] = useState(() => loadLocalPrefs().calUndatedOpen !== false);
+  const [calPopTitle, setCalPopTitle] = useState("");
 
   const noteInputRef = useRef(null);
   const newAreaInputRef = useRef(null);
@@ -1401,6 +1412,10 @@ export default function TaskApp() {
   }, [areaFilterMode]);
 
   useEffect(() => {
+    saveLocalPrefs({ calUndatedOpen });
+  }, [calUndatedOpen]);
+
+  useEffect(() => {
     saveLocalPrefs({ mobileCollapsedProjects: Array.from(mobileCollapsedProjects) });
   }, [mobileCollapsedProjects]);
 
@@ -1556,27 +1571,52 @@ export default function TaskApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notificationsEnabled]);
 
+  // Same filters the list view applies (área, proyecto, favoritas, búsqueda,
+  // ocultar hechas), so the calendar never shows something the list hides.
+  const calendarPasses = useCallback((t) => {
+    if (selectedAreaId !== "all" && t.areaId !== selectedAreaId) return false;
+    if (selectedAreaId !== "all" && selectedProjectId && t.projectId !== selectedProjectId) return false;
+    if (hideCompleted && t.status === "Hecho") return false;
+    if (search.trim() && !t.title.toLowerCase().includes(search.trim().toLowerCase())) return false;
+    if (areaFilterMode !== "off") {
+      const taskArea = areaMap[t.areaId];
+      const isFav = !!(taskArea && taskArea.favorite);
+      if (areaFilterMode === "solo" && !isFav) return false;
+      if (areaFilterMode === "mute" && isFav) return false;
+    }
+    return true;
+  }, [selectedAreaId, selectedProjectId, hideCompleted, search, areaFilterMode, areaMap]);
+
   const tasksByDate = useMemo(() => {
     const map = {};
     tasks.forEach((t) => {
-      if (!t.date) return;
-      if (selectedAreaId !== "all" && t.areaId !== selectedAreaId) return;
-      if (selectedAreaId !== "all" && selectedProjectId && t.projectId !== selectedProjectId) return;
-      if (areaFilterMode !== "off") {
-        const taskArea = areaMap[t.areaId];
-        const isFav = !!(taskArea && taskArea.favorite);
-        if (areaFilterMode === "solo" && !isFav) return;
-        if (areaFilterMode === "mute" && isFav) return;
-      }
+      if (!t.date || !calendarPasses(t)) return;
       if (!map[t.date]) map[t.date] = [];
       map[t.date].push(t);
     });
+    const rank = { Alta: 0, Media: 1, Baja: 2 };
+    Object.values(map).forEach((list) => list.sort((a, b) => (
+      (a.status === "Hecho") - (b.status === "Hecho")
+      || (rank[a.priority] ?? 1) - (rank[b.priority] ?? 1)
+      || (a.order ?? 0) - (b.order ?? 0)
+    )));
     return map;
-  }, [tasks, selectedAreaId, selectedProjectId, areaFilterMode, areaMap]);
+  }, [tasks, calendarPasses]);
+
+  const undatedTasks = useMemo(
+    () => tasks.filter((t) => !t.date && t.status !== "Hecho" && calendarPasses(t)),
+    [tasks, calendarPasses]
+  );
+
+  const overdueBeforeToday = useMemo(() => {
+    const today = todayISO();
+    return tasks.filter((t) => t.date && t.date < today && t.status !== "Hecho" && calendarPasses(t))
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+  }, [tasks, calendarPasses]);
 
   const monthGrid = useMemo(() => buildMonthGrid(calCursor.year, calCursor.month, weekStartsSunday), [calCursor, weekStartsSunday]);
   const weekDays = useMemo(() => buildWeekDays(weekAnchor, weekStartsSunday), [weekAnchor, weekStartsSunday]);
-  const focusedDate = calView === "dia" ? dayAnchor : selectedDay;
+  const focusedDate = selectedDay;
 
   function showToast(msg) {
     setToast(msg);
@@ -1587,7 +1627,7 @@ export default function TaskApp() {
     const blob = new Blob([JSON.stringify({ areas, tasks }, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "tasktracker_backup_" + new Date().toISOString().slice(0, 10) + ".json";
+    a.download = "taskapp_backup_" + new Date().toISOString().slice(0, 10) + ".json";
     a.click();
     URL.revokeObjectURL(a.href);
     showToast("Backup descargado");
@@ -2037,56 +2077,162 @@ export default function TaskApp() {
   }
 
   function pickMonth(monthIdx) {
-    setCalCursor({ year: pickerYear, month: monthIdx });
+    const t = todayISO();
+    const [ty, tm] = t.split("-").map(Number);
+    focusDay(ty === pickerYear && tm - 1 === monthIdx ? t : isoOf(pickerYear, monthIdx, 1));
     setShowMonthPicker(false);
   }
 
+  // One focused day drives every calendar view: month cursor, week and
+  // day all follow it, so switching views never "loses" where you were.
+  function focusDay(iso) {
+    const [y, m] = iso.split("-").map(Number);
+    setSelectedDay(iso);
+    setDayAnchor(iso);
+    setWeekAnchor(iso);
+    setCalCursor((c) => (c.year === y && c.month === m - 1 ? c : { year: y, month: m - 1 }));
+  }
+
   function goToday() {
-    const t = todayISO();
-    const now = new Date();
-    setCalCursor({ year: now.getFullYear(), month: now.getMonth() });
-    setWeekAnchor(t);
-    setDayAnchor(t);
-    setSelectedDay(t);
+    focusDay(todayISO());
   }
 
   function switchCalView(v) {
-    if (v === "semana") setWeekAnchor(selectedDay);
-    if (v === "dia") setDayAnchor(selectedDay);
+    setWeekAnchor(selectedDay);
+    setDayAnchor(selectedDay);
     setCalView(v);
+    setCalPopover(null);
   }
 
   function goPrevNext(dir) {
-    if (calView === "mes") changeMonth(dir);
-    else if (calView === "semana") changeWeek(dir);
-    else changeDay(dir);
+    setCalPopover(null);
+    if (calView === "mes") {
+      let month = calCursor.month + dir, year = calCursor.year;
+      if (month < 0) { month = 11; year -= 1; }
+      if (month > 11) { month = 0; year += 1; }
+      const t = todayISO();
+      const [ty, tm] = t.split("-").map(Number);
+      focusDay(ty === year && tm - 1 === month ? t : isoOf(year, month, 1));
+    } else if (calView === "semana") {
+      focusDay(addDaysISO(selectedDay, dir * 7));
+    } else {
+      focusDay(addDaysISO(selectedDay, dir));
+    }
   }
 
   function moveSelectedDay(delta) {
-    setSelectedDay((d) => {
-      const next = addDaysISO(d, delta);
-      const [y, m] = next.split("-").map(Number);
-      setCalCursor((c) => (c.year === y && c.month === m - 1 ? c : { year: y, month: m - 1 }));
-      return next;
-    });
+    focusDay(addDaysISO(selectedDay, delta));
   }
 
+  const calKeyRef = useRef(null);
+  calKeyRef.current = { moveSelectedDay, goPrevNext, goToday, switchCalView, calView, calPopover };
   useEffect(() => {
-    if (view !== "calendario" || calView !== "mes") return;
+    if (view !== "calendario" || isMobile) return;
     function handleKey(e) {
       const tag = document.activeElement?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if (e.key === "ArrowLeft") { e.preventDefault(); moveSelectedDay(-1); }
-      else if (e.key === "ArrowRight") { e.preventDefault(); moveSelectedDay(1); }
-      else if (e.key === "ArrowUp") { e.preventDefault(); moveSelectedDay(-7); }
-      else if (e.key === "ArrowDown") { e.preventDefault(); moveSelectedDay(7); }
-      else if (e.key === "PageUp") { e.preventDefault(); changeMonth(-1); }
-      else if (e.key === "PageDown") { e.preventDefault(); changeMonth(1); }
-      else if (e.key === "Home") { e.preventDefault(); goToday(); }
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = calKeyRef.current;
+      if (e.key === "Escape") { setCalPopover(null); setCalAddDay(null); return; }
+      if (k.calPopover) return;
+      const horizontal = 1;
+      const vertical = k.calView === "dia" ? 1 : 7;
+      if (e.key === "ArrowLeft") { e.preventDefault(); k.moveSelectedDay(-horizontal); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); k.moveSelectedDay(horizontal); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); k.moveSelectedDay(-vertical); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); k.moveSelectedDay(vertical); }
+      else if (e.key === "PageUp") { e.preventDefault(); k.goPrevNext(-1); }
+      else if (e.key === "PageDown") { e.preventDefault(); k.goPrevNext(1); }
+      else if (e.key === "Home" || e.key === "t" || e.key === "T") { e.preventDefault(); k.goToday(); }
+      else if (e.key === "m" || e.key === "M") k.switchCalView("mes");
+      else if (e.key === "s" || e.key === "S") k.switchCalView("semana");
+      else if (e.key === "d" || e.key === "D") k.switchCalView("dia");
+      else if (e.key === "Enter") { e.preventDefault(); setCalAddDay(selectedDayRef.current); setCalAddText(""); }
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [view, calView]);
+  }, [view, isMobile]);
+
+  const selectedDayRef = useRef(selectedDay);
+  selectedDayRef.current = selectedDay;
+
+  // ---- calendar actions ----
+  function calSetTaskDate(id, iso) {
+    const t = tasks.find((x) => x.id === id);
+    if (!t || (t.date || null) === (iso || null)) return;
+    setDate(id, iso);
+    showToast(iso ? `Movida al ${fmtDate(iso)}` : "Sin fecha");
+  }
+
+  function calDragProps(t) {
+    return {
+      draggable: true,
+      onDragStart: (e) => {
+        e.dataTransfer.setData("text/plain", t.id);
+        e.dataTransfer.effectAllowed = "move";
+        setCalDragTaskId(t.id);
+        setCalPopover(null);
+      },
+      onDragEnd: () => { setCalDragTaskId(null); setCalDropTarget(null); },
+    };
+  }
+
+  function calDropProps(target) {
+    return {
+      onDragOver: (e) => {
+        if (!calDragTaskId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (calDropTarget !== target) setCalDropTarget(target);
+      },
+      onDragLeave: (e) => {
+        if (!e.currentTarget.contains(e.relatedTarget) && calDropTarget === target) setCalDropTarget(null);
+      },
+      onDrop: (e) => {
+        e.preventDefault();
+        const id = e.dataTransfer.getData("text/plain") || calDragTaskId;
+        setCalDragTaskId(null);
+        setCalDropTarget(null);
+        if (id) calSetTaskDate(id, target === "undated" ? null : target);
+      },
+    };
+  }
+
+  function openCalTaskPopover(e, t) {
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    setCalPopTitle(t.title);
+    setCalPopover({ kind: "task", id: t.id, x: r.left, y: r.bottom, top: r.top });
+  }
+
+  function openCalDayPopover(e, iso) {
+    e.stopPropagation();
+    const cell = e.currentTarget.closest(".cal-cell") || e.currentTarget;
+    const r = cell.getBoundingClientRect();
+    setCalPopover({ kind: "day", id: iso, x: r.left, y: r.top, w: r.width });
+  }
+
+  function commitCalAdd(iso) {
+    const title = calAddText.trim();
+    if (!title) { setCalAddDay(null); return; }
+    const areaId = selectedAreaId !== "all" ? selectedAreaId : ensureArea("General");
+    const projectId = selectedAreaId !== "all" ? (selectedProjectId || null) : null;
+    setTasks((prev) => [
+      { id: uid(), areaId, projectId, title, note: "", status: "Por hacer", priority: "Media", date: iso },
+      ...prev,
+    ]);
+    setCalAddText("");
+    showToast("Tarea creada");
+  }
+
+  function commitCalPopTitle(id) {
+    const clean = calPopTitle.trim();
+    if (clean) setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, title: clean } : t)));
+  }
+
+  function toggleTaskDone(id) {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: t.status === "Hecho" ? "Por hacer" : "Hecho" } : t)));
+  }
 
   function colGroupFor(showArea) {
     return (
@@ -2886,6 +3032,463 @@ export default function TaskApp() {
     );
   }
 
+  // ================= CALENDAR =================
+  function areaColorOf(t) {
+    return areaMap[t.areaId]?.color || "#8d94a0";
+  }
+
+  function longDateLabel(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return `${weekdayFullOf(iso)} ${d} de ${MONTH_LABELS[m - 1].toLowerCase()}${y !== new Date().getFullYear() ? ` de ${y}` : ""}`;
+  }
+
+  function relativeDayLabel(iso) {
+    const t = todayISO();
+    if (iso === t) return "Hoy";
+    if (iso === addDaysISO(t, 1)) return "Mañana";
+    if (iso === addDaysISO(t, -1)) return "Ayer";
+    return null;
+  }
+
+  function renderCalChip(t, { wrap = false } = {}) {
+    const overdue = isOverdue(t.date, t.status);
+    const done = t.status === "Hecho";
+    return (
+      <button
+        key={t.id}
+        type="button"
+        className={`cal-chip ${wrap ? "cal-chip--wrap" : ""} ${done ? "cal-chip--done" : ""} ${overdue ? "cal-chip--overdue" : ""} ${calDragTaskId === t.id ? "cal-chip--dragging" : ""} ${calPopover?.kind === "task" && calPopover.id === t.id ? "cal-chip--open" : ""}`}
+        style={{ "--chip": areaColorOf(t) }}
+        onClick={(e) => openCalTaskPopover(e, t)}
+        title={`${t.title} · ${areaMap[t.areaId]?.name || ""}`}
+        {...calDragProps(t)}
+      >
+        {t.priority === "Alta" && !done && <span className="cal-chip-prio" aria-label="Prioridad alta" />}
+        <span className="cal-chip-text">{t.title}</span>
+      </button>
+    );
+  }
+
+  function renderCalInlineAdd(iso) {
+    if (calAddDay !== iso) return null;
+    return (
+      <input
+        className="cal-inline-add"
+        autoFocus
+        placeholder="Nueva tarea…"
+        value={calAddText}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => setCalAddText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commitCalAdd(iso);
+          if (e.key === "Escape") { setCalAddDay(null); setCalAddText(""); }
+        }}
+        onBlur={() => { if (calAddText.trim()) commitCalAdd(iso); setCalAddDay(null); setCalAddText(""); }}
+      />
+    );
+  }
+
+  function renderAgendaRow(t, { showDate = false, big = false } = {}) {
+    const a = areaMap[t.areaId];
+    const p = t.projectId ? a?.projects?.find((x) => x.id === t.projectId) : null;
+    const done = t.status === "Hecho";
+    const overdue = isOverdue(t.date, t.status);
+    return (
+      <div
+        key={t.id}
+        className={`agenda-row ${big ? "agenda-row--big" : ""} ${done ? "agenda-row--done" : ""} ${calDragTaskId === t.id ? "agenda-row--dragging" : ""}`}
+        style={{ "--chip": a?.color || "#8d94a0" }}
+        {...calDragProps(t)}
+      >
+        <button className="agenda-check" onClick={() => toggleTaskDone(t.id)} title={done ? "Marcar como pendiente" : "Marcar como hecha"}>
+          {done ? <CheckCircle2 size={big ? 18 : 16} /> : <Circle size={big ? 18 : 16} />}
+        </button>
+        <button className="agenda-main" onClick={(e) => openCalTaskPopover(e, t)}>
+          <span className="agenda-title">{t.title}</span>
+          <span className="agenda-meta">
+            <span className="agenda-area-dot" />
+            {a?.name}{p ? ` / ${p.name}` : ""}
+            {showDate && t.date && <span className={overdue ? "agenda-date agenda-date--overdue" : "agenda-date"}>{fmtDate(t.date)}</span>}
+          </span>
+        </button>
+        {t.priority === "Alta" && !done && <Flag size={13} className="agenda-flag" />}
+        {t.status === "Haciendo" && <CircleDot size={14} className="agenda-doing" title="Haciendo" />}
+      </div>
+    );
+  }
+
+  function renderMiniMonth() {
+    const today = todayISO();
+    const labels = weekStartsSunday ? WEEKDAY_LABELS_SUN_FIRST : WEEKDAY_LABELS;
+    return (
+      <div className="mini-month">
+        <div className="mini-month-head">
+          <span className="mini-month-label">{MONTH_LABELS[calCursor.month]} {calCursor.year}</span>
+          <span className="mini-month-nav">
+            <button className="mini-nav-btn" onClick={() => { setCalCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { ...c, month: c.month - 1 })); }} title="Mes anterior"><ChevronLeft size={14} /></button>
+            <button className="mini-nav-btn" onClick={() => { setCalCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { ...c, month: c.month + 1 })); }} title="Mes siguiente"><ChevronRight size={14} /></button>
+          </span>
+        </div>
+        <div className="mini-month-grid">
+          {labels.map((w) => <span key={w} className="mini-wd">{w.slice(0, 1)}</span>)}
+          {monthGrid.map((cell) => {
+            const has = (tasksByDate[cell.iso] || []).some((t) => t.status !== "Hecho");
+            return (
+              <button
+                key={cell.iso}
+                className={`mini-day ${!cell.inMonth ? "mini-day--out" : ""} ${cell.iso === today ? "mini-day--today" : ""} ${cell.iso === selectedDay ? "mini-day--selected" : ""}`}
+                onClick={() => focusDay(cell.iso)}
+              >
+                {cell.day}
+                {has && <span className="mini-dot" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function renderCalSidePanel() {
+    const dayTasks = tasksByDate[selectedDay] || [];
+    const rel = relativeDayLabel(selectedDay);
+    const holidayName = isHoliday(selectedDay, holidayCountry);
+    return (
+      <aside className="cal-side">
+        {renderMiniMonth()}
+
+        {calView !== "dia" && (
+          <section className={`cal-side-section ${calDropTarget === selectedDay ? "cal-side-section--drop" : ""}`} {...calDropProps(selectedDay)}>
+            <div className="cal-side-day-head">
+              <div>
+                <div className="cal-side-day-title">{rel ? `${rel}, ` : ""}{longDateLabel(selectedDay).replace(/^./, (c) => (rel ? c.toLowerCase() : c))}</div>
+                {holidayName && <div className="cal-side-holiday">{holidayName}</div>}
+              </div>
+              <span className="cal-side-count">{dayTasks.filter((t) => t.status !== "Hecho").length}</span>
+            </div>
+            <div className="cal-side-add">
+              <Plus size={14} />
+              <input
+                type="text"
+                placeholder="Agregar a este día"
+                value={dayQuickTitle}
+                onChange={(e) => setDayQuickTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addTaskForFocusedDay()}
+              />
+            </div>
+            <div className="cal-side-list">
+              {dayTasks.length === 0 && <div className="cal-side-empty">Día libre. Escribí arriba o arrastrá una tarea acá.</div>}
+              {dayTasks.map((t) => renderAgendaRow(t))}
+            </div>
+          </section>
+        )}
+
+        <section className={`cal-side-section cal-side-section--undated ${calDropTarget === "undated" ? "cal-side-section--drop" : ""}`} {...calDropProps("undated")}>
+          <button className="cal-side-toggle" onClick={() => setCalUndatedOpen((v) => !v)}>
+            <Inbox size={14} />
+            <span>Sin fecha</span>
+            <span className="cal-side-count">{undatedTasks.length}</span>
+            <span className="cal-side-toggle-chev">{calUndatedOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
+          </button>
+          {calUndatedOpen && (
+            <div className="cal-side-list">
+              {undatedTasks.length === 0
+                ? <div className="cal-side-empty">Todo tiene fecha. Arrastrá una tarea acá para sacársela.</div>
+                : <>
+                    <div className="cal-side-hint">Arrastralas a un día para agendarlas.</div>
+                    {undatedTasks.map((t) => renderAgendaRow(t))}
+                  </>}
+            </div>
+          )}
+        </section>
+      </aside>
+    );
+  }
+
+  function renderCalPopover() {
+    if (!calPopover) return null;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    if (calPopover.kind === "day") {
+      const list = tasksByDate[calPopover.id] || [];
+      const w = Math.max(240, Math.min(300, (calPopover.w || 240) + 40));
+      const left = Math.min(Math.max(8, calPopover.x - 20), vw - w - 8);
+      const top = Math.min(calPopover.y - 6, vh - 360);
+      return createPortal(
+        <>
+          <div className="cal-pop-scrim" onClick={() => setCalPopover(null)} />
+          <div className="cal-pop cal-pop--day" style={{ left, top, width: w }} onClick={(e) => e.stopPropagation()}>
+            <div className="cal-pop-day-head">
+              <span>{longDateLabel(calPopover.id)}</span>
+              <button className="cal-pop-close" onClick={() => setCalPopover(null)}><X size={14} /></button>
+            </div>
+            <div className="cal-pop-day-list">{list.map((t) => renderCalChip(t, { wrap: true }))}</div>
+          </div>
+        </>,
+        document.body
+      );
+    }
+    const t = tasks.find((x) => x.id === calPopover.id);
+    if (!t) return null;
+    const a = areaMap[t.areaId];
+    const p = t.projectId ? a?.projects?.find((x) => x.id === t.projectId) : null;
+    const w = 300;
+    const left = Math.min(Math.max(8, calPopover.x), vw - w - 8);
+    const fitsBelow = calPopover.y + 250 < vh;
+    const style = fitsBelow ? { left, top: calPopover.y + 6, width: w } : { left, bottom: vh - calPopover.top + 6, width: w };
+    return createPortal(
+      <>
+        <div className="cal-pop-scrim" onClick={() => { commitCalPopTitle(t.id); setCalPopover(null); }} />
+        <div className="cal-pop cal-pop--task tt-portal" style={{ ...style, "--chip": a?.color || "#8d94a0" }} onClick={(e) => e.stopPropagation()}>
+          <div className="cal-pop-area">
+            <span className="cal-pop-area-dot" />
+            {a?.name}{p ? ` / ${p.name}` : ""}
+            <button className="cal-pop-close" onClick={() => { commitCalPopTitle(t.id); setCalPopover(null); }}><X size={14} /></button>
+          </div>
+          <textarea
+            className="cal-pop-title"
+            rows={Math.max(1, Math.min(4, Math.ceil(calPopTitle.length / 30)))}
+            value={calPopTitle}
+            onChange={(e) => setCalPopTitle(e.target.value)}
+            onBlur={() => commitCalPopTitle(t.id)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitCalPopTitle(t.id); e.currentTarget.blur(); } }}
+          />
+          {t.note && <div className="cal-pop-note">{t.note}</div>}
+          <div className="cal-pop-fields">
+            <span className="cal-pop-label">Estado</span>
+            <StatusPill value={t.status} onClick={() => cycleStatus(t.id)} />
+            <span className="cal-pop-label">Prioridad</span>
+            <span><PriorityBadge value={t.priority} onClick={() => cyclePriority(t.id)} /></span>
+            <span className="cal-pop-label">Fecha</span>
+            <DateField value={t.date} onChange={(v) => setDate(t.id, v)} overdue={isOverdue(t.date, t.status)} weekStartsSunday={weekStartsSunday} />
+          </div>
+          <div className="cal-pop-actions">
+            {t.date && t.date !== todayISO() && (
+              <button className="cal-pop-btn" onClick={() => calSetTaskDate(t.id, todayISO())}><ArrowRight size={13} /> Pasar a hoy</button>
+            )}
+            {t.date && (
+              <button className="cal-pop-btn" onClick={() => { calSetTaskDate(t.id, null); setCalPopover(null); }}><CalendarX size={13} /> Quitar fecha</button>
+            )}
+            <span style={{ flex: 1 }} />
+            <button className="cal-pop-btn cal-pop-btn--danger" onClick={() => { setCalPopover(null); setDeleteTarget({ type: "task", id: t.id }); }} title="Eliminar"><Trash2 size={13} /></button>
+          </div>
+        </div>
+      </>,
+      document.body
+    );
+  }
+
+  function renderCalendar() {
+    const today = todayISO();
+    const labels = weekStartsSunday ? WEEKDAY_LABELS_SUN_FIRST : WEEKDAY_LABELS;
+    const weeks = monthGrid.length / 7;
+    const maxChips = weeks >= 6 ? 3 : 4;
+    const isWeekendIdx = (i) => (weekStartsSunday ? i === 0 || i === 6 : i >= 5);
+
+    let title;
+    if (calView === "mes") title = `${MONTH_LABELS[calCursor.month]} ${calCursor.year}`;
+    else if (calView === "semana") {
+      const a = weekDays[0].iso.split("-").map(Number), b = weekDays[6].iso.split("-").map(Number);
+      title = a[1] === b[1]
+        ? `${a[2]} – ${b[2]} de ${MONTH_LABELS[a[1] - 1].toLowerCase()} ${a[0]}`
+        : `${a[2]} ${MONTH_ABBR[a[1] - 1].toLowerCase()} – ${b[2]} ${MONTH_ABBR[b[1] - 1].toLowerCase()} ${b[0]}`;
+    } else title = longDateLabel(selectedDay);
+
+    const dayCellHandlers = (iso) => ({
+      onClick: () => { focusDay(iso); setCalPopover(null); },
+      onDoubleClick: (e) => { if (e.target.closest(".cal-chip")) return; focusDay(iso); setCalAddDay(iso); setCalAddText(""); },
+      ...calDropProps(iso),
+    });
+
+    return (
+      <div className="calendar-wrap">
+        <div className="cal-main">
+          <div className="cal-toolbar">
+            <div className="cal-title-wrap month-picker-wrap" ref={monthPickerRef}>
+              <button
+                className="cal-title"
+                onClick={() => (showMonthPicker ? setShowMonthPicker(false) : openMonthPicker())}
+                title="Elegir mes"
+              >
+                {title}
+                <ChevronDown size={16} className="cal-title-chev" />
+              </button>
+              {showMonthPicker && (
+                <div className="month-picker-pop">
+                  <div className="month-picker-header">
+                    <button className="cal-nav-btn" onClick={() => setPickerYear((y) => y - 1)}><ChevronLeft size={14} /></button>
+                    <span className="month-picker-year">{pickerYear}</span>
+                    <button className="cal-nav-btn" onClick={() => setPickerYear((y) => y + 1)}><ChevronRight size={14} /></button>
+                  </div>
+                  <div className="month-picker-grid">
+                    {MONTH_ABBR.map((m, i) => (
+                      <button
+                        key={m}
+                        className={`month-picker-cell ${pickerYear === calCursor.year && i === calCursor.month ? "month-picker-cell--selected" : ""}`}
+                        onClick={() => pickMonth(i)}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="cal-nav">
+              <button className="cal-nav-btn" onClick={() => goPrevNext(-1)} title="Anterior (RePág)"><ChevronLeft size={16} /></button>
+              <button className="cal-today-btn" onClick={goToday} title="Ir a hoy (T)">Hoy</button>
+              <button className="cal-nav-btn" onClick={() => goPrevNext(1)} title="Siguiente (AvPág)"><ChevronRight size={16} /></button>
+            </div>
+            <div className="cal-toolbar-spacer" />
+            <div className="cal-view-switch" role="tablist">
+              {[["mes", "Mes", "M"], ["semana", "Semana", "S"], ["dia", "Día", "D"]].map(([k, label, key]) => (
+                <button key={k} role="tab" aria-selected={calView === k} className={`seg-btn ${calView === k ? "seg-btn--active" : ""}`} onClick={() => switchCalView(k)} title={`${label} (${key})`}>{label}</button>
+              ))}
+            </div>
+          </div>
+
+          {calView === "mes" && (
+            <div className="cal-month" style={{ "--weeks": weeks }}>
+              <div className="cal-month-head">
+                {labels.map((w, i) => <div key={w} className={`cal-weekday ${isWeekendIdx(i) ? "cal-weekday--weekend" : ""}`}>{w}</div>)}
+              </div>
+              <div className="cal-month-body">
+                {monthGrid.map((cell, idx) => {
+                  const dayTasks = tasksByDate[cell.iso] || [];
+                  const isToday = cell.iso === today;
+                  const isSelected = cell.iso === selectedDay;
+                  const holidayName = isHoliday(cell.iso, holidayCountry);
+                  const cap = maxChips - (holidayName ? 1 : 0);
+                  const shown = dayTasks.length > cap ? dayTasks.slice(0, cap - 1) : dayTasks;
+                  const hidden = dayTasks.length - shown.length;
+                  return (
+                    <div
+                      key={cell.iso}
+                      className={`cal-cell ${!cell.inMonth ? "cal-cell--out" : ""} ${isWeekendIdx(idx % 7) ? "cal-cell--weekend" : ""} ${isToday ? "cal-cell--today" : ""} ${isSelected ? "cal-cell--selected" : ""} ${holidayName ? "cal-cell--holiday" : ""} ${calDropTarget === cell.iso ? "cal-cell--drop" : ""} ${cell.iso < today && cell.inMonth ? "cal-cell--past" : ""}`}
+                      {...dayCellHandlers(cell.iso)}
+                    >
+                      <div className="cal-cell-head">
+                        <span className="cal-cell-num">{cell.day === 1 && !cell.inMonth ? `${cell.day} ${MONTH_ABBR[Number(cell.iso.slice(5, 7)) - 1].toLowerCase()}` : cell.day}</span>
+                        <button
+                          className="cal-cell-add"
+                          title="Agregar tarea"
+                          onClick={(e) => { e.stopPropagation(); focusDay(cell.iso); setCalAddDay(cell.iso); setCalAddText(""); }}
+                        ><Plus size={13} /></button>
+                      </div>
+                      {holidayName && <div className="cal-cell-holiday" title={holidayName}>{holidayName}</div>}
+                      <div className="cal-cell-tasks">
+                        {shown.map((t) => renderCalChip(t))}
+                        {hidden > 0 && (
+                          <button className="cal-more" onClick={(e) => openCalDayPopover(e, cell.iso)}>{hidden} más</button>
+                        )}
+                        {renderCalInlineAdd(cell.iso)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {calView === "semana" && (
+            <div className="cal-week">
+              {weekDays.map((d, i) => {
+                const dayTasks = tasksByDate[d.iso] || [];
+                const isToday = d.iso === today;
+                const holidayName = isHoliday(d.iso, holidayCountry);
+                return (
+                  <div
+                    key={d.iso}
+                    className={`cal-week-col ${isWeekendIdx(i) ? "cal-cell--weekend" : ""} ${isToday ? "cal-cell--today" : ""} ${d.iso === selectedDay ? "cal-cell--selected" : ""} ${calDropTarget === d.iso ? "cal-cell--drop" : ""} ${d.iso < today ? "cal-cell--past" : ""}`}
+                    {...dayCellHandlers(d.iso)}
+                  >
+                    <div className="cal-week-head">
+                      <span className="cal-week-wd">{labels[i]}</span>
+                      <span className="cal-week-num">{d.day}</span>
+                    </div>
+                    {holidayName && <div className="cal-week-holiday">{holidayName}</div>}
+                    <div className="cal-week-tasks">
+                      {dayTasks.map((t) => renderCalChip(t, { wrap: true }))}
+                      {renderCalInlineAdd(d.iso)}
+                      {calAddDay !== d.iso && (
+                        <button className="cal-week-add" onClick={(e) => { e.stopPropagation(); focusDay(d.iso); setCalAddDay(d.iso); setCalAddText(""); }}>
+                          <Plus size={13} /> Agregar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {calView === "dia" && (() => {
+            const dayTasks = tasksByDate[selectedDay] || [];
+            const pending = dayTasks.filter((t) => t.status !== "Hecho");
+            const done = dayTasks.filter((t) => t.status === "Hecho");
+            const holidayName = isHoliday(selectedDay, holidayCountry);
+            const rel = relativeDayLabel(selectedDay);
+            const showOverdue = selectedDay === today && overdueBeforeToday.length > 0;
+            return (
+              <div className={`cal-day-view ${calDropTarget === selectedDay ? "cal-day-view--drop" : ""}`} {...calDropProps(selectedDay)}>
+                <div className="cal-day-hero">
+                  <span className={`cal-day-hero-num ${selectedDay === today ? "cal-day-hero-num--today" : ""}`}>{Number(selectedDay.slice(8))}</span>
+                  <div>
+                    <div className="cal-day-hero-wd">{rel || weekdayFullOf(selectedDay)}</div>
+                    <div className="cal-day-hero-sub">
+                      {`${Number(selectedDay.slice(8))} de ${MONTH_LABELS[Number(selectedDay.slice(5, 7)) - 1].toLowerCase()} de ${selectedDay.slice(0, 4)}`}
+                      {holidayName && <span className="cal-day-hero-holiday">{holidayName}</span>}
+                    </div>
+                  </div>
+                  <span style={{ flex: 1 }} />
+                  <span className="cal-day-hero-count">{pending.length} {pending.length === 1 ? "pendiente" : "pendientes"}</span>
+                </div>
+                <div className="cal-day-add">
+                  <Plus size={16} />
+                  <input
+                    type="text"
+                    placeholder={`Agregar tarea para ${rel ? rel.toLowerCase() : "este día"}`}
+                    value={dayQuickTitle}
+                    onChange={(e) => setDayQuickTitle(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addTaskForFocusedDay()}
+                  />
+                </div>
+                <div className="cal-day-list">
+                  {pending.length === 0 && done.length === 0 && (
+                    <div className="cal-day-empty">Nada agendado. Agregá una tarea arriba o arrastrá una desde "Sin fecha".</div>
+                  )}
+                  {pending.map((t) => renderAgendaRow(t, { big: true }))}
+                  {done.length > 0 && <div className="cal-day-subhead">Hechas</div>}
+                  {done.map((t) => renderAgendaRow(t, { big: true }))}
+                </div>
+                {showOverdue && (
+                  <div className="cal-day-overdue">
+                    <div className="cal-day-subhead cal-day-subhead--bad">
+                      Atrasadas <span>{overdueBeforeToday.length}</span>
+                      <span style={{ flex: 1 }} />
+                      <button
+                        className="cal-pop-btn"
+                        onClick={() => { overdueBeforeToday.forEach((t) => setDate(t.id, today)); showToast(`${overdueBeforeToday.length} pasadas a hoy`); }}
+                      >
+                        <ArrowRight size={13} /> Pasar todas a hoy
+                      </button>
+                    </div>
+                    {overdueBeforeToday.map((t) => renderAgendaRow(t, { big: true, showDate: true }))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="cal-footer-hint">
+            Doble clic en un día para agregar · arrastrá tareas para cambiarles la fecha · flechas para moverte, T para hoy
+          </div>
+        </div>
+        {renderCalSidePanel()}
+        {renderCalPopover()}
+      </div>
+    );
+  }
+
   function renderTaskTable(list, { showArea = false, showHeader = false, indent = false } = {}) {
     return (
       <table>
@@ -3086,21 +3689,35 @@ export default function TaskApp() {
   return (
     <div className="tt-root">
       <style>{`
+        :root, .tt-root {
+          --bg: #0f1116;
+          --side: #12141a;
+          --surface: #161921;
+          --surface-2: #1d212b;
+          --surface-3: #262b37;
+          --weekend: rgba(0,0,0,0.16);
+          --border: rgba(255,255,255,0.075);
+          --border-strong: rgba(255,255,255,0.13);
+          --text: #eceef3;
+          --text-dim: #9ba2b0;
+          --text-faint: #646c7a;
+          --amber: #f2ab43;
+          --amber-soft: rgba(242,171,67,0.13);
+          --amber-line: rgba(242,171,67,0.5);
+          --blue: #5b97ff;
+          --alta: #f25f55;
+          --media: #f2ab43;
+          --baja: #646c7a;
+          --good: #3ecf6a;
+          --radius-lg: 14px;
+          --shadow-pop: 0 20px 50px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07);
+          --font: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
         .tt-root {
           position: relative;
-          --bg: #0c0e11;
-          --surface: #14171b;
-          --surface-2: #191d22;
-          --border: #262a30;
-          --text: #e9ebee;
-          --text-dim: #8d94a0;
-          --text-faint: #565d68;
-          --amber: #e8a33d;
-          --blue: #4c8dff;
-          --alta: #f0554b;
-          --media: #e8a33d;
-          --baja: #565d68;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          font-family: var(--font);
+          font-feature-settings: "ss01", "cv11";
+          -webkit-font-smoothing: antialiased;
           background: var(--bg);
           color: var(--text);
           display: flex;
@@ -3108,33 +3725,33 @@ export default function TaskApp() {
           height: 100vh;
           height: 100dvh;
           min-height: 640px;
-          border-radius: 12px;
           overflow: hidden;
-          border: 1px solid var(--border);
           text-align: left;
         }
+        .tt-root button, .tt-root input, .tt-root select, .tt-root textarea { font-family: inherit; }
+        .tt-root :focus-visible { outline: 2px solid var(--amber-line); outline-offset: 1px; }
         .tt-root * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 10px; height: 10px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; border: 2px solid var(--bg); }
         ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
         ::-webkit-scrollbar-corner { background: var(--bg); }
-        .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .mono { font-variant-numeric: tabular-nums; }
         .tt-body { display: flex; flex: 1; min-height: 0; }
 
         /* ---- sidebar ---- */
         .sidebar {
-          width: 244px;
+          width: 248px;
           flex-shrink: 0;
-          background: var(--surface);
+          background: var(--side);
           border-right: 1px solid var(--border);
           display: flex;
           flex-direction: column;
-          padding: 18px 14px;
+          padding: 18px 12px 12px;
           overflow-y: auto;
         }
         .brand { display: flex; align-items: center; gap: 8px; padding: 4px 6px 20px; font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
-        .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(232,163,61,0.15); }
+        .brand-dot { width: 9px; height: 9px; border-radius: 3px; background: var(--amber); box-shadow: 0 0 0 3px rgba(242,171,67,0.16); transform: rotate(45deg); }
         .side-label { font-size: 12.5px; color: var(--text-faint); font-weight: 600; letter-spacing: 0.06em; padding: 0 6px; margin: 14px 0 6px; }
         .side-label-row { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 6px; padding: 0 2px 0 6px; }
         .side-label-row .side-label { margin: 0; padding: 0; }
@@ -3144,12 +3761,13 @@ export default function TaskApp() {
         .fav-star-btn--active { color: var(--amber); }
         .side-item {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 7px 8px; border-radius: 7px; font-size: 14px; color: var(--text-dim);
-          cursor: pointer; margin-bottom: 1px; transition: background .12s, color .12s;
+          padding: 7px 9px; border-radius: 8px; font-size: 14px; color: var(--text-dim);
+          cursor: pointer; margin-bottom: 2px; transition: background .12s, color .12s;
           user-select: none;
         }
-        .side-item:hover { background: var(--surface-2); color: var(--text); }
-        .side-item--active { background: var(--surface-2); color: var(--text); }
+        .side-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+        .side-item--active { background: var(--surface-2); color: var(--text); font-weight: 500; }
+        .side-item--active .side-item-left > svg { color: var(--amber); }
         .side-item--disabled { cursor: default; opacity: 0.45; }
         .side-item--disabled:hover { background: none; color: var(--text-dim); }
         .side-item-left { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
@@ -3176,7 +3794,7 @@ export default function TaskApp() {
           background: none; border: 1px solid var(--border); border-radius: 7px; color: var(--text-faint);
           font-size: 11.5px; padding: 5px 10px; cursor: pointer; flex-shrink: 0;
         }
-        .account-logout:hover { color: var(--alta); border-color: rgba(240,85,75,0.4); }
+        .account-logout:hover { color: var(--alta); border-color: rgba(242,95,85,0.4); }
         .notif-toggle-row {
           display: flex; align-items: center; justify-content: space-between; gap: 10px;
           padding: 12px; margin-top: 8px; border-top: 1px solid var(--border);
@@ -3188,7 +3806,7 @@ export default function TaskApp() {
           padding: 2px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center;
         }
         .switch-knob { width: 14px; height: 14px; border-radius: 50%; background: var(--text-faint); transition: transform .15s, background .15s; }
-        .switch--on { background: rgba(76,141,255,0.25); border-color: rgba(76,141,255,0.5); }
+        .switch--on { background: rgba(91,151,255,0.25); border-color: rgba(91,151,255,0.5); }
         .switch--on .switch-knob { background: var(--blue); transform: translateX(14px); }
 
         .rename-input, .rename-project-input {
@@ -3201,7 +3819,7 @@ export default function TaskApp() {
         }
         .side-item:hover .area-edit-btn { opacity: 1; }
         .area-edit-btn:hover { color: var(--text); background: var(--border); }
-        .area-edit-btn--danger:hover { color: var(--alta); background: rgba(240,85,75,0.14); }
+        .area-edit-btn--danger:hover { color: var(--alta); background: rgba(242,95,85,0.14); }
         .new-area-input {
           margin-top: 10px; background: var(--surface-2); border: 1px solid var(--amber);
           border-radius: 7px; color: var(--text); font-size: 13.5px; padding: 8px; width: 100%; outline: none;
@@ -3225,52 +3843,54 @@ export default function TaskApp() {
         .color-popover {
           position: absolute; top: 20px; left: 0; z-index: 61; width: 130px;
           background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
-          padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+          padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; box-shadow: var(--shadow-pop);
         }
         .color-swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.18); cursor: pointer; padding: 0; transition: transform .1s; }
         .color-swatch:hover { transform: scale(1.15); }
 
         /* ---- main ---- */
         .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        .topbar { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+        .topbar { display: flex; align-items: center; gap: 8px; height: 60px; flex-shrink: 0; padding: 0 20px; border-bottom: 1px solid var(--border); }
         .topbar h1 {
           font-size: 17.5px; font-weight: 600; margin: 0; letter-spacing: -0.01em;
           width: 155px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .search-wrap {
           display: flex; align-items: center; gap: 7px; background: var(--surface); border: 1px solid var(--border);
-          border-radius: 8px; padding: 6px 10px; flex: 1; max-width: 320px; margin-left: 2px;
+          border-radius: 9px; height: 32px; padding: 0 11px; flex: 1; min-width: 130px; max-width: 320px; margin-left: 6px; transition: border-color .12s;
         }
+        .search-wrap:focus-within { border-color: var(--amber-line); }
         .search-wrap input { background: none; border: none; outline: none; color: var(--text); font-size: 13.5px; width: 100%; }
         .search-wrap input::placeholder { color: var(--text-faint); }
         .fav-filter-btn { display: flex; align-items: center; gap: 6px; }
-        .fav-filter-btn--active { color: var(--amber); border-color: rgba(232,163,61,0.4); background: rgba(232,163,61,0.08); }
+        .fav-filter-btn--active { color: var(--amber); border-color: rgba(242,171,67,0.4); background: rgba(242,171,67,0.08); }
         .topbar-spacer { flex: 1; }
-        .counter { font-size: 12.5px; padding: 6px 10px; border-radius: 7px; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); display: flex; gap: 5px; align-items: center; white-space: nowrap; flex-shrink: 0; }
+        .counter { font-size: 12.5px; height: 32px; padding: 0 11px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); cursor: pointer; font-family: inherit; color: var(--text-dim); display: flex; gap: 5px; align-items: center; white-space: nowrap; flex-shrink: 0; }
         .counter b { color: var(--text); font-weight: 700; }
         .counter--warn b { color: var(--alta); }
         .counter--clickable { cursor: pointer; }
-        .counter--clickable:hover { border-color: #33383f; }
-        .counter--active { border-color: var(--amber); background: rgba(232,163,61,0.08); }
+        .counter--clickable:hover { border-color: var(--border-strong); }
+        .counter--active { border-color: var(--amber); background: rgba(242,171,67,0.08); }
         .iconbtn {
           display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-dim); background: var(--surface);
-          border: 1px solid var(--border); border-radius: 7px; padding: 6px 10px; cursor: pointer; white-space: nowrap;
+          border: 1px solid var(--border); border-radius: 9px; height: 32px; padding: 0 11px; cursor: pointer; white-space: nowrap;
+          transition: color .12s, border-color .12s, background .12s;
         }
-        .iconbtn:hover { color: var(--text); border-color: #33383f; }
-        .iconbtn--active { color: var(--amber); border-color: rgba(232,163,61,0.4); background: rgba(232,163,61,0.08); }
-        .icon-only { padding: 6px 7px; }
+        .iconbtn:hover { color: var(--text); border-color: var(--border-strong); }
+        .iconbtn--active { color: var(--amber); border-color: rgba(242,171,67,0.4); background: rgba(242,171,67,0.08); }
+        .icon-only { padding: 0; width: 32px; justify-content: center; }
         .sync-indicator { cursor: default; color: var(--text-dim); }
-        .sync-indicator--error { color: var(--alta) !important; border-color: rgba(240,85,75,0.4) !important; }
-        .m-fav-btn--active { color: var(--amber) !important; border-color: rgba(232,163,61,0.4) !important; }
+        .sync-indicator--error { color: var(--alta) !important; border-color: rgba(242,95,85,0.4) !important; }
+        .m-fav-btn--active { color: var(--amber) !important; border-color: rgba(242,171,67,0.4) !important; }
         .sync-indicator:hover { color: var(--text-dim); border-color: var(--border); }
-        .lang-select { padding: 6px 8px; cursor: pointer; font-size: 12px; font-weight: 700; }
+        .lang-select { width: auto; padding: 0 6px 0 9px; cursor: pointer; font-size: 12px; font-weight: 650; }
 
         .bell-wrap { position: relative; display: inline-flex; }
         .bell-dot { position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--alta); border: 1.5px solid var(--surface); }
         .notif-panel {
           position: absolute; top: 34px; right: 0; z-index: 61; width: 280px; max-height: 340px;
           display: flex; flex-direction: column; background: var(--surface-2); border: 1px solid var(--border);
-          border-radius: 10px; box-shadow: 0 12px 28px rgba(0,0,0,0.5); overflow: hidden;
+          border-radius: 10px; box-shadow: var(--shadow-pop); overflow: hidden;
         }
         .notif-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; font-size: 13px; font-weight: 700; border-bottom: 1px solid var(--border); }
         .notif-panel-count { color: var(--text-faint); font-weight: 400; }
@@ -3282,27 +3902,29 @@ export default function TaskApp() {
         .notif-row-meta { font-size: 12px; color: var(--text-faint); }
 
         /* ---- input card ---- */
-        .input-card { width: calc(100% - 40px); margin: 18px auto; max-width: 1320px; height: 160px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+        .input-card { width: calc(100% - 40px); margin: 18px auto; max-width: 1320px; height: 160px; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); flex-shrink: 0; }
         .tabs { display: flex; border-bottom: 1px solid var(--border); }
-        .tab-btn { padding: 11px 16px; font-size: 13.5px; color: var(--text-faint); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+        .tab-btn { padding: 11px 16px; font-size: 13.5px; font-weight: 500; color: var(--text-faint); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .12s; }
+        .tab-btn:hover { color: var(--text-dim); }
         .tab-btn--active { color: var(--text); border-bottom-color: var(--amber); }
         .input-body { padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; }
         .input-body textarea {
-          flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px;
+          flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
           color: var(--text); padding: 10px 12px; font-size: 14px; font-family: inherit; resize: none;
           min-height: 38px; outline: none; line-height: 1.4;
         }
-        .input-body textarea:focus { border-color: rgba(232,163,61,0.5); }
+        .input-body textarea:focus { border-color: rgba(242,171,67,0.5); }
         .input-body textarea::placeholder { color: var(--text-faint); }
         .procesar-btn {
-          background: var(--amber); color: #1b1304; border: none; border-radius: 9px; padding: 12px 18px;
-          font-size: 13.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 7px;
+          background: var(--amber); color: #1b1304; border: none; border-radius: 10px; padding: 12px 18px;
+          font-size: 13.5px; font-weight: 650; cursor: pointer; display: flex; align-items: center; gap: 7px;
           white-space: nowrap; flex-shrink: 0; transition: filter .12s;
         }
         .procesar-btn:hover { filter: brightness(1.08); }
         .procesar-btn:disabled { opacity: 0.55; cursor: default; }
         .spin { animation: tt-spin 0.8s linear infinite; }
         @keyframes tt-spin { to { transform: rotate(360deg); } }
+        @keyframes tt-toast-in { from { opacity: 0; transform: translate(-50%, 6px); } }
         .hint-text { padding: 0 16px 12px; font-size: 12.5px; color: var(--text-faint); line-height: 1.5; }
         .manual-form { padding: 14px 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
         .manual-form input[type=text] { flex: 1; min-width: 160px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; color: var(--text); padding: 10px 12px; font-size: 14px; outline: none; }
@@ -3312,11 +3934,13 @@ export default function TaskApp() {
         /* ---- groups / table ---- */
         .groups { flex: 1; overflow-y: auto; width: calc(100% - 40px); max-width: 1320px; margin: 0 auto; padding: 0 0 24px; }
         .groups--first-view { padding-top: 18px; }
-        .group { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; background: var(--surface); }
-        .group-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px; cursor: pointer; user-select: none; }
-        .group-bar { width: 3px; align-self: stretch; border-radius: 2px; }
-        .group-name { font-weight: 700; font-size: 14px; letter-spacing: 0.02em; flex: 1; text-transform: uppercase; }
-        .group-count { font-size: 12px; color: var(--text-dim); background: var(--surface-2); padding: 4px 9px; border-radius: 999px; }
+        .group { border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 16px; overflow: hidden; background: var(--surface); }
+        .group-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; cursor: pointer; user-select: none; transition: background .12s; }
+        .group-head { background: linear-gradient(90deg, color-mix(in srgb, var(--chip, transparent) 9%, transparent), transparent 45%); }
+        .group-head:hover { background-color: rgba(255,255,255,0.02); }
+        .group-bar { width: 4px; align-self: stretch; border-radius: 3px; box-shadow: 0 0 12px -2px var(--chip, transparent); }
+        .group-name { font-weight: 650; font-size: 14px; letter-spacing: 0.03em; flex: 1; text-transform: uppercase; }
+        .group-count { font-size: 12px; font-weight: 500; color: var(--text-dim); background: var(--surface-2); padding: 4px 10px; border-radius: 999px; }
         .chev { color: var(--text-faint); }
 
         .subgroup { }
@@ -3342,18 +3966,19 @@ export default function TaskApp() {
           background: var(--surface-2); border: 1px dashed var(--border); border-radius: 9px;
           color: var(--text-dim); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center;
         }
-        .panel-add-project-btn:hover { color: var(--amber); border-color: rgba(232,163,61,0.5); }
+        .panel-add-project-btn:hover { color: var(--amber); border-color: rgba(242,171,67,0.5); }
         .panel-new-project-input {
           width: 100%; padding: 10px 12px; background: var(--surface-2); border: 1px dashed var(--amber); border-radius: 9px;
           color: var(--text); font-size: 13.5px; outline: none;
         }
 
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        thead th { text-align: left; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-faint); font-weight: 600; padding: 8px 16px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        thead th { text-align: left; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); font-weight: 600; padding: 8px 16px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.012); }
         .area-columns-header { margin-bottom: -1px; }
         tbody tr { border-bottom: 1px solid var(--border); }
         tbody tr:last-child { border-bottom: none; }
-        tbody tr:hover { background: var(--surface-2); }
+        tbody tr { transition: background .1s; }
+        tbody tr:hover { background: rgba(255,255,255,0.028); }
         tbody tr:hover .row-del { opacity: 1; }
         tbody tr[draggable] { cursor: grab; }
         tbody tr.row-dragging { opacity: 0.4; }
@@ -3375,12 +4000,12 @@ export default function TaskApp() {
 
         .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; }
         .pill--Porhacer { color: var(--text-dim); }
-        .pill--Haciendo { color: var(--blue); border-color: rgba(76,141,255,0.35); background: rgba(76,141,255,0.08); }
+        .pill--Haciendo { color: var(--blue); border-color: rgba(91,151,255,0.35); background: rgba(91,151,255,0.08); }
         .pill--Hecho { color: #34D399; border-color: rgba(52,211,153,0.35); background: rgba(52,211,153,0.08); }
 
-        .badge--priority { border: none; cursor: pointer; font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 6px; }
-        .badge--Alta { background: rgba(240,85,75,0.14); color: var(--alta); }
-        .badge--Media { background: rgba(232,163,61,0.14); color: var(--media); }
+        .badge--priority { border: none; cursor: pointer; font-size: 12px; font-weight: 650; padding: 5px 10px; border-radius: 7px; }
+        .badge--Alta { background: rgba(242,95,85,0.14); color: var(--alta); }
+        .badge--Media { background: rgba(242,171,67,0.14); color: var(--media); }
         .badge--Baja { background: rgba(86,93,104,0.2); color: var(--text-dim); }
 
         .datefield { position: relative; display: inline-block; }
@@ -3389,10 +4014,10 @@ export default function TaskApp() {
         .datefield-btn--empty { color: var(--text-faint); }
         .datefield-btn--overdue { color: var(--alta); font-weight: 600; }
         .datefield-pop {
-          position: fixed; z-index: 200; width: 220px;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
-          padding: 10px; box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+          position: fixed; z-index: 200; width: 232px;
+          font-family: var(--font);
+          background: var(--surface-2); border-radius: 12px; color: var(--text);
+          padding: 10px; box-shadow: var(--shadow-pop);
         }
         .datefield-pop-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
         .datefield-pop-label { font-size: 13px; font-weight: 700; color: var(--text); }
@@ -3403,15 +4028,16 @@ export default function TaskApp() {
         .datefield-day--out { opacity: 0.3; }
         .datefield-day--today { color: var(--amber); font-weight: 700; }
         .datefield-day--selected { background: var(--amber); color: #1b1304; font-weight: 700; }
+        .datefield-day { font-family: inherit; }
         .datefield-pop-actions { display: flex; justify-content: space-between; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
         .datefield-action { background: none; border: none; color: var(--text-dim); font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
         .datefield-action:hover { background: var(--border); color: var(--text); }
 
         .row-del { opacity: 0; background: none; border: none; color: var(--text-faint); cursor: pointer; padding: 4px; border-radius: 5px; transition: opacity .12s; }
-        .row-del:hover { color: var(--alta); background: rgba(240,85,75,0.1); }
+        .row-del:hover { color: var(--alta); background: rgba(242,95,85,0.1); }
 
-        .group-head--dragover { background: rgba(232,163,61,0.08); box-shadow: inset 0 0 0 1px var(--amber); }
-        .subgroup--dragover { background: rgba(232,163,61,0.06); box-shadow: inset 0 0 0 1px var(--amber); }
+        .group-head--dragover { background: rgba(242,171,67,0.08); box-shadow: inset 0 0 0 1px var(--amber); }
+        .subgroup--dragover { background: rgba(242,171,67,0.06); box-shadow: inset 0 0 0 1px var(--amber); }
         .empty-hint { padding: 14px 16px; font-size: 13px; color: var(--text-faint); font-style: italic; }
         .area-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-dim); }
         .area-tag-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
@@ -3430,14 +4056,15 @@ export default function TaskApp() {
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-faint); font-size: 14px; }
 
         .toast {
-          position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
-          background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
-          font-size: 13.5px; padding: 9px 16px; border-radius: 9px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+          position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 90;
+          background: var(--surface-3); color: var(--text); font-weight: 500;
+          font-size: 13.5px; padding: 10px 16px; border-radius: 11px; box-shadow: var(--shadow-pop);
+          animation: tt-toast-in .18s ease-out;
         }
 
         /* ---- urgent ticker bar ---- */
         .urgent-bar {
-          flex-shrink: 0; height: 48px; border-top: 1px solid var(--border); background: var(--surface);
+          flex-shrink: 0; height: 46px; border-top: 1px solid var(--border); background: var(--side);
           display: flex; align-items: center; gap: 12px; padding: 0 20px;
         }
         .urgent-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; color: var(--alta); flex-shrink: 0; }
@@ -3445,77 +4072,278 @@ export default function TaskApp() {
         .urgent-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--alta); }
         .urgent-dot--off { background: var(--text-faint); }
         .urgent-empty { font-size: 13px; color: var(--text-faint); }
-        .urgent-chip { font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 5px; flex-shrink: 0; }
-        .urgent-chip--vencida { background: rgba(240,85,75,0.16); color: var(--alta); }
-        .urgent-chip--hoy { background: rgba(232,163,61,0.16); color: var(--amber); }
-        .urgent-chip--manana { background: rgba(76,141,255,0.16); color: var(--blue); }
+        .urgent-chip { font-size: 11.5px; font-weight: 650; padding: 3px 9px; border-radius: 999px; flex-shrink: 0; }
+        .urgent-chip--vencida { background: rgba(242,95,85,0.16); color: var(--alta); }
+        .urgent-chip--hoy { background: rgba(242,171,67,0.16); color: var(--amber); }
+        .urgent-chip--manana { background: rgba(91,151,255,0.16); color: var(--blue); }
         .urgent-title { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .urgent-meta { font-size: 12.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .urgent-spacer { flex: 1; }
         .urgent-count { font-size: 12px; color: var(--text-faint); flex-shrink: 0; }
 
         /* ---- calendar ---- */
-        .calendar-wrap { flex: 1; overflow-y: auto; padding: 18px 20px 24px; display: flex; flex-direction: column; }
-        .cal-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-        .cal-today-btn { font-weight: 700; }
-        .cal-nav { display: flex; align-items: center; gap: 8px; }
-        .cal-nav-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); cursor: pointer; flex-shrink: 0; }
-        .cal-nav-btn:hover { color: var(--text); border-color: #33383f; }
-        .cal-month-label { font-size: 16px; font-weight: 700; min-width: 160px; letter-spacing: -0.01em; text-align: center; }
-        .cal-month-label--clickable { background: none; border: 1px solid transparent; border-radius: 8px; padding: 5px 10px; cursor: pointer; color: var(--text); }
-        .cal-month-label--clickable:hover { background: var(--surface); border-color: var(--border); }
+        .calendar-wrap { flex: 1; min-height: 0; display: flex; }
+        .cal-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 16px 20px 10px; }
+        .cal-toolbar { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+        .cal-title-wrap { position: relative; }
+        .cal-title {
+          display: flex; align-items: center; gap: 6px; background: none; border: none; color: var(--text);
+          font: inherit; font-size: 22px; font-weight: 650; letter-spacing: -0.025em; padding: 4px 8px; margin-left: -8px;
+          border-radius: 9px; cursor: pointer;
+        }
+        .cal-title::first-letter { text-transform: uppercase; }
+        .cal-title:hover { background: var(--surface); }
+        .cal-title-chev { color: var(--text-faint); margin-top: 2px; }
+        .cal-nav { display: flex; align-items: center; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 2px; }
+        .cal-nav-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 7px; border: none; background: none; color: var(--text-dim); cursor: pointer; flex-shrink: 0; }
+        .cal-nav-btn:hover { color: var(--text); background: var(--surface-2); }
+        .cal-today-btn { height: 28px; padding: 0 12px; border: none; background: none; color: var(--text); font: inherit; font-size: 13px; font-weight: 600; border-radius: 7px; cursor: pointer; }
+        .cal-today-btn:hover { background: var(--surface-2); }
         .month-picker-wrap { position: relative; }
         .month-picker-pop {
-          position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); z-index: 40;
-          background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px;
-          box-shadow: 0 16px 40px rgba(0,0,0,0.45); width: 240px;
+          position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+          background: var(--surface-2); border-radius: 12px; padding: 12px; box-shadow: var(--shadow-pop); width: 248px;
         }
         .month-picker-header { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px; }
-        .month-picker-year { font-size: 14px; font-weight: 700; min-width: 44px; text-align: center; }
-        .month-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-        .month-picker-cell { padding: 8px 0; font-size: 12.5px; font-weight: 600; color: var(--text-dim); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; cursor: pointer; }
-        .month-picker-cell:hover { color: var(--text); border-color: #33383f; }
-        .month-picker-cell--selected { background: var(--amber); color: #1a1305; border-color: var(--amber); }
-        .cal-view-switch { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
-        .seg-btn { padding: 6px 12px; font-size: 12.5px; color: var(--text-dim); background: none; border: none; border-radius: 6px; cursor: pointer; }
-        .seg-btn--active { background: var(--surface-2); color: var(--text); }
+        .month-picker-year { font-size: 14px; font-weight: 700; min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
+        .month-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+        .month-picker-cell { padding: 9px 0; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-dim); background: none; border: none; border-radius: 8px; cursor: pointer; }
+        .month-picker-cell:hover { color: var(--text); background: var(--surface-3); }
+        .month-picker-cell--selected { background: var(--amber); color: #1b1304; }
+        .month-picker-cell--selected:hover { background: var(--amber); color: #1b1304; }
+        .cal-view-switch { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 2px; }
+        .seg-btn { padding: 6px 13px; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--text-dim); background: none; border: none; border-radius: 7px; cursor: pointer; }
+        .seg-btn:hover { color: var(--text); }
+        .seg-btn--active { background: var(--surface-3); color: var(--text); font-weight: 600; }
         .cal-toolbar-spacer { flex: 1; }
-        .cal-kbd-hint { font-size: 11.5px; color: var(--text-faint); margin-right: 4px; }
+        .cal-footer-hint { font-size: 11.5px; color: var(--text-faint); padding: 8px 2px 0; }
 
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 18px; }
-        .cal-weekday { text-align: center; font-size: 11.5px; color: var(--text-faint); font-weight: 600; padding: 4px 0 8px; display: flex; align-items: center; justify-content: center; gap: 5px; }
-        .cal-day { border: 1px solid var(--border); border-radius: 9px; background: var(--surface); min-height: 168px; min-width: 0; overflow: hidden; padding: 7px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: border-color .12s, background .12s; position: relative; }
-        .cal-holiday-dot { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--alta); }
-        .cal-day--week { min-height: 220px; }
-        .cal-day:hover { border-color: #33383f; }
-        .cal-day--out { opacity: 0.35; }
-        .cal-day--today { border-color: rgba(232,163,61,0.6); }
-        .cal-day--holiday { background: rgba(232,163,61,0.05); }
-        .cal-day--selected { background: var(--surface-2); border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber); }
-        .cal-day-num { font-size: 12.5px; color: var(--text-dim); }
-        .cal-day--today .cal-day-num { color: var(--amber); font-weight: 700; }
-        .cal-day-tasks { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-        .cal-chip { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--text-dim); background: var(--surface-2); border-radius: 4px; padding: 2px 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
-        .cal-chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-        .cal-chip-text { overflow: hidden; text-overflow: ellipsis; }
-        .cal-chip--done { opacity: 0.55; text-decoration: line-through; }
-        .cal-more { font-size: 11px; color: var(--text-faint); padding-left: 2px; }
+        /* month */
+        .cal-month { flex: 1; min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+        .cal-month-head { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--border); }
+        .cal-weekday { padding: 9px 12px; font-size: 12px; font-weight: 600; color: var(--text-dim); }
+        .cal-weekday--weekend { color: var(--text-faint); }
+        .cal-month-body {
+          flex: 1; min-height: 0; overflow-y: auto; display: grid;
+          grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(var(--weeks), minmax(96px, 1fr));
+        }
+        .cal-cell {
+          position: relative; min-width: 0; min-height: 0; overflow: hidden; padding: 6px 6px 6px;
+          display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+          transition: background .12s, box-shadow .12s;
+        }
+        .cal-cell:nth-child(7n) { border-right: none; }
+        .cal-cell:nth-last-child(-n+7) { border-bottom: none; }
+        .cal-cell--weekend { background: var(--weekend); }
+        .cal-cell--selected { background: rgba(242,171,67,0.045); box-shadow: inset 0 0 0 1.5px var(--amber-line); }
+        .cal-cell--drop, .cal-week-col.cal-cell--drop { background: var(--amber-soft); box-shadow: inset 0 0 0 2px var(--amber); }
+        .cal-cell-head { display: flex; align-items: center; gap: 6px; min-height: 24px; }
+        .cal-cell-num {
+          height: 24px; min-width: 24px; padding: 0 7px; border-radius: 999px; flex-shrink: 0;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 12.5px; font-weight: 600; color: var(--text-dim); font-variant-numeric: tabular-nums;
+        }
+        .cal-cell--past .cal-cell-num { color: var(--text-faint); }
+        .cal-cell--out .cal-cell-num { color: var(--text-faint); opacity: 0.7; }
+        .cal-cell--out .cal-chip { opacity: 0.5; }
+        .cal-cell--holiday .cal-cell-num { color: var(--alta); }
+        .cal-cell--today .cal-cell-num { background: var(--amber); color: #1b1304; font-weight: 700; }
+        .cal-cell-holiday { margin: -3px 0 0 4px; font-size: 11px; line-height: 1.3; color: var(--alta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+        .cal-cell-add {
+          margin-left: auto; width: 22px; height: 22px; flex-shrink: 0; border: none; border-radius: 6px; background: none;
+          color: var(--text-faint); display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: opacity .12s;
+        }
+        .cal-cell:hover .cal-cell-add, .cal-cell-add:focus-visible { opacity: 1; }
+        .cal-cell-add:hover { background: var(--surface-3); color: var(--text); }
+        .cal-cell-tasks { display: flex; flex-direction: column; gap: 3px; min-width: 0; min-height: 0; }
 
-        .cal-detail { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 14px 16px; }
-        .cal-detail--day { padding: 20px; }
-        .cal-detail-head { display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 700; margin-bottom: 12px; }
-        .cal-detail--day .cal-detail-head { font-size: 16.5px; }
-        .cal-detail-count { color: var(--text-dim); font-weight: 400; font-size: 12.5px; }
-        .cal-detail-add { display: flex; gap: 8px; margin-bottom: 12px; }
-        .cal-detail-add input { flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; color: var(--text); font-size: 13.5px; outline: none; }
-        .cal-detail-add input:focus { border-color: rgba(232,163,61,0.5); }
-        .cal-detail-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
-        .cal-detail-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; }
+        .cal-chip {
+          display: flex; align-items: center; gap: 5px; width: 100%; min-width: 0; flex-shrink: 0; text-align: left;
+          font: inherit; font-size: 12px; line-height: 1.3; color: var(--text); padding: 3px 7px 3px 9px;
+          border: none; border-radius: 6px; cursor: pointer;
+          background: color-mix(in srgb, var(--chip) 15%, transparent); box-shadow: inset 2.5px 0 0 var(--chip);
+          transition: background .12s;
+        }
+        .cal-chip:hover { background: color-mix(in srgb, var(--chip) 26%, transparent); }
+        .cal-chip:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+        .cal-chip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cal-chip--wrap { align-items: flex-start; padding: 6px 8px 6px 10px; font-size: 12.5px; }
+        .cal-chip--wrap .cal-chip-prio { margin-top: 5px; }
+        .cal-chip--wrap .cal-chip-text { white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+        .cal-chip-prio { width: 6px; height: 6px; border-radius: 50%; background: var(--alta); flex-shrink: 0; }
+        .cal-chip--overdue { color: #ffc1bb; }
+        .cal-chip--done { background: transparent; color: var(--text-faint); box-shadow: inset 2.5px 0 0 color-mix(in srgb, var(--chip) 35%, transparent); }
+        .cal-chip--done .cal-chip-text { text-decoration: line-through; }
+        .cal-chip--dragging { opacity: 0.35; }
+        .cal-chip--open { box-shadow: inset 2.5px 0 0 var(--chip), 0 0 0 1.5px var(--chip); }
+        .cal-more { align-self: flex-start; font: inherit; font-size: 11.5px; font-weight: 600; color: var(--text-dim); background: none; border: none; padding: 2px 8px; border-radius: 6px; cursor: pointer; }
+        .cal-more:hover { background: var(--surface-3); color: var(--text); }
+        .cal-inline-add {
+          width: 100%; flex-shrink: 0; font: inherit; font-size: 12px; background: var(--bg); color: var(--text);
+          border: 1px solid var(--amber-line); border-radius: 6px; padding: 4px 7px; outline: none;
+        }
+
+        /* week */
+        .cal-week { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+        .cal-week-col { min-width: 0; min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border); transition: background .12s, box-shadow .12s; }
+        .cal-week-col:last-child { border-right: none; }
+        .cal-week-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 12px 10px; border-bottom: 1px solid var(--border); }
+        .cal-week-wd { font-size: 12px; font-weight: 600; color: var(--text-dim); }
+        .cal-week-num {
+          height: 38px; min-width: 38px; margin-left: -6px; padding: 0 6px; border-radius: 999px;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 24px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+        }
+        .cal-cell--past .cal-week-num { color: var(--text-faint); }
+        .cal-cell--today .cal-week-num { background: var(--amber); color: #1b1304; }
+        .cal-week-holiday { font-size: 11.5px; color: var(--alta); padding: 8px 12px 0; }
+        .cal-week-tasks { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+        .cal-week-add {
+          display: flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; color: var(--text-faint);
+          background: none; border: 1px dashed transparent; border-radius: 7px; padding: 6px 8px; cursor: pointer; opacity: 0; transition: opacity .12s;
+        }
+        .cal-week-col:hover .cal-week-add, .cal-week-add:focus-visible { opacity: 1; }
+        .cal-week-add:hover { border-color: var(--border-strong); color: var(--text-dim); }
+
+        /* day */
+        .cal-day-view { flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); padding: 24px 28px 28px; transition: box-shadow .12s; }
+        .cal-day-view--drop { box-shadow: inset 0 0 0 2px var(--amber); }
+        .cal-day-view > * { max-width: 780px; }
+        .cal-day-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+        .cal-day-hero-num {
+          width: 64px; height: 64px; border-radius: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+          background: var(--surface-2); font-size: 34px; font-weight: 650; letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
+        }
+        .cal-day-hero-num--today { background: var(--amber); color: #1b1304; }
+        .cal-day-hero-wd { font-size: 21px; font-weight: 650; letter-spacing: -0.02em; }
+        .cal-day-hero-sub { font-size: 13.5px; color: var(--text-dim); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .cal-day-hero-holiday { color: var(--alta); }
+        .cal-day-hero-count { font-size: 12.5px; font-weight: 600; color: var(--text-dim); background: var(--surface-2); padding: 5px 11px; border-radius: 999px; }
+        .cal-day-add {
+          display: flex; align-items: center; gap: 10px; padding: 11px 14px; margin-bottom: 14px;
+          border: 1px dashed var(--border-strong); border-radius: 11px; color: var(--text-faint);
+        }
+        .cal-day-add:focus-within { border-style: solid; border-color: var(--amber-line); }
+        .cal-day-add input { flex: 1; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 14.5px; }
+        .cal-day-add input::placeholder { color: var(--text-faint); }
+        .cal-day-list { display: flex; flex-direction: column; gap: 6px; }
+        .cal-day-empty { font-size: 13.5px; color: var(--text-faint); padding: 18px 2px; }
+        .cal-day-subhead { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); margin: 18px 0 8px; }
+        .cal-day-subhead span { font-variant-numeric: tabular-nums; }
+        .cal-day-subhead--bad { color: var(--alta); }
+        .cal-day-overdue { margin-top: 18px; padding-top: 2px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+
+        /* agenda rows (side panel + day view) */
+        .agenda-row {
+          display: flex; align-items: center; gap: 8px; padding: 6px 9px 6px 8px; border-radius: 9px; cursor: grab;
+          background: var(--surface-2); box-shadow: inset 2.5px 0 0 var(--chip); transition: background .12s;
+        }
+        .agenda-row:hover { background: var(--surface-3); }
+        .agenda-row--big { padding: 10px 14px 10px 12px; gap: 12px; }
+        .agenda-row--dragging { opacity: 0.4; }
+        .agenda-check { flex-shrink: 0; display: flex; padding: 2px; background: none; border: none; color: var(--text-faint); cursor: pointer; border-radius: 50%; }
+        .agenda-check:hover { color: var(--good); }
+        .agenda-row--done .agenda-check { color: var(--good); }
+        .agenda-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 0; background: none; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+        .agenda-title { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .agenda-row--big .agenda-title { font-size: 14.5px; white-space: normal; }
+        .agenda-row--done .agenda-title { color: var(--text-faint); text-decoration: line-through; }
+        .agenda-meta { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 11.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; }
+        .agenda-row--big .agenda-meta { font-size: 12.5px; }
+        .agenda-area-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--chip); flex-shrink: 0; }
+        .agenda-date { margin-left: 6px; font-variant-numeric: tabular-nums; }
+        .agenda-date--overdue { color: var(--alta); }
+        .agenda-flag { color: var(--alta); flex-shrink: 0; }
+        .agenda-doing { color: var(--blue); flex-shrink: 0; }
+
+        /* side panel */
+        .cal-side {
+          width: 300px; flex-shrink: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+          padding: 16px 14px 24px; border-left: 1px solid var(--border); background: var(--side);
+        }
+        .mini-month-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 2px 8px 6px; }
+        .mini-month-label { font-size: 13.5px; font-weight: 650; }
+        .mini-month-nav { display: flex; gap: 2px; }
+        .mini-nav-btn { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border: none; border-radius: 7px; background: none; color: var(--text-dim); cursor: pointer; }
+        .mini-nav-btn:hover { background: var(--surface-2); color: var(--text); }
+        .mini-month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .mini-wd { text-align: center; font-size: 10.5px; font-weight: 600; color: var(--text-faint); padding: 2px 0 4px; }
+        .mini-day {
+          position: relative; height: 31px; border: none; border-radius: 8px; background: none; cursor: pointer;
+          color: var(--text-dim); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums;
+        }
+        .mini-day:hover { background: var(--surface-2); color: var(--text); }
+        .mini-day--out { color: var(--text-faint); opacity: 0.6; }
+        .mini-day--today { color: var(--amber); font-weight: 700; }
+        .mini-day--selected, .mini-day--selected:hover { background: var(--amber); color: #1b1304; font-weight: 700; opacity: 1; }
+        .mini-dot { position: absolute; left: 50%; bottom: 3px; width: 3px; height: 3px; margin-left: -1.5px; border-radius: 50%; background: currentColor; opacity: 0.75; }
+        .cal-side-section { border-top: 1px solid var(--border); padding-top: 14px; transition: background .12s, box-shadow .12s; border-radius: 2px; }
+        .cal-side-section--drop { background: var(--amber-soft); box-shadow: 0 0 0 2px var(--amber); border-radius: 10px; }
+        .cal-side-day-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 0 2px; margin-bottom: 10px; }
+        .cal-side-day-title { font-size: 14px; font-weight: 650; letter-spacing: -0.01em; }
+        .cal-side-holiday { font-size: 12px; color: var(--alta); margin-top: 3px; }
+        .cal-side-count { flex-shrink: 0; font-size: 11.5px; font-weight: 600; color: var(--text-dim); background: var(--surface-2); padding: 2px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+        .cal-side-add { display: flex; align-items: center; gap: 8px; padding: 7px 10px; margin-bottom: 10px; color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: 9px; }
+        .cal-side-add:focus-within { border-style: solid; border-color: var(--amber-line); }
+        .cal-side-add input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 13px; }
+        .cal-side-add input::placeholder { color: var(--text-faint); }
+        .cal-side-list { display: flex; flex-direction: column; gap: 5px; }
+        .cal-side-empty { font-size: 12.5px; line-height: 1.5; color: var(--text-faint); padding: 6px 2px; }
+        .cal-side-hint { font-size: 11.5px; color: var(--text-faint); padding: 0 2px 4px; }
+        .cal-side-toggle { display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 2px 10px; background: none; border: none; color: var(--text); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+        .cal-side-toggle > svg:first-child { color: var(--text-dim); }
+        .cal-side-toggle .cal-side-count { margin-left: auto; }
+        .cal-side-toggle-chev { display: flex; color: var(--text-faint); }
+
+        /* popovers (rendered in a portal on <body>) */
+        .cal-pop-scrim { position: fixed; inset: 0; z-index: 150; }
+        .cal-pop {
+          position: fixed; z-index: 151; padding: 12px 14px; border-radius: 13px; color: var(--text);
+          font-family: var(--font); background: var(--surface-2); box-shadow: var(--shadow-pop);
+          animation: tt-pop-in .14s ease-out;
+        }
+        @keyframes tt-pop-in { from { opacity: 0; transform: translateY(-4px) scale(.985); } }
+        .cal-pop-area { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+        .cal-pop-area-dot { width: 9px; height: 9px; border-radius: 3px; background: var(--chip); }
+        .cal-pop-close { margin-left: auto; display: flex; padding: 4px; border: none; border-radius: 6px; background: none; color: var(--text-faint); cursor: pointer; }
+        .cal-pop-close:hover { background: var(--surface-3); color: var(--text); }
+        .cal-pop-title {
+          display: block; width: calc(100% + 12px); margin: 0 -6px; padding: 4px 6px; border: none; border-radius: 7px; outline: none; resize: none;
+          background: none; color: var(--text); font: inherit; font-size: 15.5px; font-weight: 600; line-height: 1.35;
+        }
+        .cal-pop-title:hover { background: rgba(255,255,255,0.03); }
+        .cal-pop-title:focus { background: var(--bg); }
+        .cal-pop-note { font-size: 12.5px; line-height: 1.45; color: var(--text-dim); margin: 2px 0 4px; }
+        .cal-pop-fields { display: grid; grid-template-columns: 72px 1fr; align-items: center; gap: 8px 10px; margin-top: 8px; padding: 10px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .cal-pop-fields > * { justify-self: start; }
+        .cal-pop-label { font-size: 12px; color: var(--text-faint); }
+        .cal-pop-actions { display: flex; align-items: center; gap: 6px; padding-top: 10px; flex-wrap: wrap; }
+        .cal-pop-btn {
+          display: inline-flex; align-items: center; gap: 5px; padding: 6px 9px; border: none; border-radius: 7px;
+          background: var(--surface-3); color: var(--text-dim); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+        }
+        .cal-pop-btn:hover { color: var(--text); background: #2f3542; }
+        .cal-pop-btn--danger:hover { color: var(--alta); background: rgba(242,95,85,0.14); }
+        .cal-pop-day-head { display: flex; align-items: center; font-size: 13.5px; font-weight: 650; margin-bottom: 8px; }
+        .cal-pop-day-list { display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto; }
+
+        @media (max-width: 1400px) {
+          .cal-side { width: 264px; }
+        }
+        @media (max-width: 1300px), (max-height: 760px) {
+          .cal-footer-hint { display: none; }
+        }
+        @media (max-width: 1160px) {
+          .cal-side { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .cal-pop { animation: none; }
+        }
 
         /* ---- modal ---- */
-        .modal-overlay { position: absolute; inset: 0; background: rgba(4,5,7,0.72); display: flex; align-items: center; justify-content: center; z-index: 70; }
-        .modal-card { position: relative; width: 320px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 20px 48px rgba(0,0,0,0.5); }
-        .settings-modal-card { width: 540px; max-width: 90vw; padding: 28px 32px; border-radius: 14px; }
+        .modal-overlay { position: absolute; inset: 0; background: rgba(6,7,10,0.62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 70; }
+        .modal-card { position: relative; width: 340px; background: var(--surface-2); border-radius: 16px; padding: 22px; box-shadow: var(--shadow-pop); }
+        .settings-modal-card { width: 560px; max-width: 90vw; max-height: 88vh; overflow-y: auto; padding: 28px 32px; border-radius: 18px; }
         .settings-modal-card .modal-title { font-size: 17px; margin-bottom: 18px; }
         .settings-modal-card .settings-group-title:first-of-type { margin-top: 0; }
         .settings-modal-card .settings-row { padding: 16px 0; gap: 24px; }
@@ -3531,7 +4359,7 @@ export default function TaskApp() {
         .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
         .modal-text { font-size: 13.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 18px; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
-        .modal-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 13.5px; cursor: pointer; border: none; }
+        .modal-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 9px; font-size: 13.5px; font-weight: 500; cursor: pointer; border: none; font-family: inherit; }
         .modal-btn--cancel { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); }
         .modal-btn--cancel:hover { color: var(--text); }
         .modal-btn--danger { background: var(--alta); color: #fff; font-weight: 700; }
@@ -3543,7 +4371,7 @@ export default function TaskApp() {
           width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
           padding: 9px 11px; color: var(--text); font-size: 13.5px; outline: none; margin-bottom: 8px;
         }
-        .settings-input:focus { border-color: rgba(232,163,61,0.5); }
+        .settings-input:focus { border-color: rgba(242,171,67,0.5); }
         .settings-error { font-size: 12.5px; color: var(--alta); margin-bottom: 10px; }
         .settings-check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-dim); margin-bottom: 18px; }
         .settings-group-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); font-weight: 700; margin: 20px 4px 6px; }
@@ -3589,7 +4417,7 @@ export default function TaskApp() {
           }
           .m-filter b { color: var(--text); }
           .m-filter-bad { color: var(--alta) !important; }
-          .m-filter--active { border-color: rgba(232,163,61,0.5); background: rgba(232,163,61,0.1); }
+          .m-filter--active { border-color: rgba(242,171,67,0.5); background: rgba(242,171,67,0.1); }
           .m-search-row { display: flex; gap: 8px; }
           .m-search-row--sub { padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
           .m-search { flex: 1; display: flex; align-items: center; gap: 7px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 9px 12px; }
@@ -3643,7 +4471,7 @@ export default function TaskApp() {
           .m-header-delete { background: none; border: none; color: var(--text-faint); padding: 4px; }
           .m-hide-done { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-faint); border-radius: 8px; padding: 8px 11px; display: flex; }
           .m-top-iconbtn { padding: 8px 10px !important; }
-          .m-hide-done--active { color: var(--amber); border-color: rgba(232,163,61,0.4); }
+          .m-hide-done--active { color: var(--amber); border-color: rgba(242,171,67,0.4); }
 
           .m-project-block { margin-bottom: 18px; }
           .m-project-tasks { }
@@ -3657,7 +4485,7 @@ export default function TaskApp() {
           .m-inline-add-zone { min-height: 34px; cursor: text; -webkit-user-select: none; user-select: none; }
           .m-inline-add-zone--active { min-height: 0; padding: 6px 4px; }
           .m-inline-add-zone--active input {
-            width: 100%; background: var(--surface-2); border: 1px solid rgba(232,163,61,0.4); border-radius: 8px;
+            width: 100%; background: var(--surface-2); border: 1px solid rgba(242,171,67,0.4); border-radius: 8px;
             outline: none; color: var(--text); font-size: 15px; padding: 9px 11px; font-family: inherit;
           }
 
@@ -3676,8 +4504,8 @@ export default function TaskApp() {
           .m-task-row--dragging { z-index: 10; box-shadow: 0 6px 16px rgba(0,0,0,0.4); border-radius: 8px; background: var(--surface); pointer-events: none; }
           .m-task-row--drop-before { box-shadow: inset 0 2px 0 0 var(--amber); }
           .m-task-row--drop-after { box-shadow: inset 0 -2px 0 0 var(--amber); }
-          .m-task-row--revealed { background: rgba(240,85,75,0.06); }
-          .m-area-card--revealed { background: rgba(240,85,75,0.06); }
+          .m-task-row--revealed { background: rgba(242,95,85,0.06); }
+          .m-area-card--revealed { background: rgba(242,95,85,0.06); }
           .m-row-delete {
             flex-shrink: 0; display: flex; align-items: center; gap: 6px; background: var(--alta); color: #fff;
             border: none; border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 700;
@@ -3687,7 +4515,7 @@ export default function TaskApp() {
           .m-task-title { font-size: 16.5px; color: var(--text); line-height: 1.35; }
           .m-task-title--done { color: var(--text-faint); text-decoration: line-through; }
           .m-task-title-input, .m-task-note-input {
-            width: 100%; background: var(--surface-2); border: 1px solid rgba(232,163,61,0.4); border-radius: 6px;
+            width: 100%; background: var(--surface-2); border: 1px solid rgba(242,171,67,0.4); border-radius: 6px;
             outline: none; color: var(--text); font-size: 15px; padding: 5px 7px 5px 3px; font-family: inherit;
           }
           .m-task-note { font-size: 13px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -4069,7 +4897,7 @@ export default function TaskApp() {
               {grouped.map(({ area, allTasks, noProject, projectGroups }) => {
                 const isCollapsed = collapsed[area.id];
                 return (
-                  <div className="group" key={area.id}>
+                  <div className="group" key={area.id} style={{ "--chip": area.color }}>
                     <div
                       className={`group-head ${dragOverKey === `area-${area.id}` ? "group-head--dragover" : ""}`}
                       onClick={() => toggleCollapse(area.id)}
@@ -4218,7 +5046,7 @@ export default function TaskApp() {
               const isCollapsed = collapsed[key];
               const barColor = priority === "Alta" ? "var(--alta)" : priority === "Media" ? "var(--media)" : "var(--baja)";
               return (
-                <div className="group" key={key}>
+                <div className="group" key={key} style={{ "--chip": barColor }}>
                   <div className="group-head" onClick={() => toggleCollapse(key)}>
                     <div className="group-bar" style={{ background: barColor }} />
                     <div className="group-name">{priority}</div>
@@ -4231,146 +5059,7 @@ export default function TaskApp() {
             })}
           </div>
         ) : (
-          <div className="calendar-wrap">
-            <div className="cal-toolbar">
-              <button className="iconbtn cal-today-btn" onClick={goToday}>Hoy</button>
-              <div className="cal-nav">
-                <button className="cal-nav-btn" onClick={() => goPrevNext(-1)}><ChevronLeft size={16} /></button>
-                {calView === "mes" ? (
-                  <div className="month-picker-wrap" ref={monthPickerRef}>
-                    <button className="cal-month-label cal-month-label--clickable" onClick={() => (showMonthPicker ? setShowMonthPicker(false) : openMonthPicker())}>
-                      {MONTH_LABELS[calCursor.month]} {calCursor.year}
-                    </button>
-                    {showMonthPicker && (
-                      <div className="month-picker-pop">
-                        <div className="month-picker-header">
-                          <button className="cal-nav-btn" onClick={() => setPickerYear((y) => y - 1)}><ChevronLeft size={14} /></button>
-                          <span className="month-picker-year">{pickerYear}</span>
-                          <button className="cal-nav-btn" onClick={() => setPickerYear((y) => y + 1)}><ChevronRight size={14} /></button>
-                        </div>
-                        <div className="month-picker-grid">
-                          {MONTH_ABBR.map((m, i) => (
-                            <button
-                              key={m}
-                              className={`month-picker-cell ${pickerYear === calCursor.year && i === calCursor.month ? "month-picker-cell--selected" : ""}`}
-                              onClick={() => pickMonth(i)}
-                            >
-                              {m}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="cal-month-label">
-                    {calView === "semana" && `${fmtDate(weekDays[0].iso)} – ${fmtDate(weekDays[6].iso)}`}
-                    {calView === "dia" && `${weekdayFullOf(dayAnchor)} ${fmtDate(dayAnchor)}`}
-                  </div>
-                )}
-                <button className="cal-nav-btn" onClick={() => goPrevNext(1)}><ChevronRight size={16} /></button>
-              </div>
-              <div className="cal-view-switch">
-                <button className={`seg-btn ${calView === "mes" ? "seg-btn--active" : ""}`} onClick={() => switchCalView("mes")}>Mes</button>
-                <button className={`seg-btn ${calView === "semana" ? "seg-btn--active" : ""}`} onClick={() => switchCalView("semana")}>Semana</button>
-                <button className={`seg-btn ${calView === "dia" ? "seg-btn--active" : ""}`} onClick={() => switchCalView("dia")}>Día</button>
-              </div>
-              <div className="cal-toolbar-spacer" />
-              {calView === "mes" && <span className="cal-kbd-hint">← → ↑ ↓ navegan · Inicio = hoy</span>}
-            </div>
-
-            {calView === "mes" && (
-              <div className="cal-grid">
-                {(weekStartsSunday ? WEEKDAY_LABELS_SUN_FIRST : WEEKDAY_LABELS).map((w) => <div key={w} className="cal-weekday">{w}</div>)}
-                {monthGrid.map((cell) => {
-                  const dayTasks = tasksByDate[cell.iso] || [];
-                  const isToday = cell.iso === todayISO();
-                  const isSelected = cell.iso === selectedDay;
-                  const holidayName = isHoliday(cell.iso, holidayCountry);
-                  return (
-                    <div
-                      key={cell.iso}
-                      className={`cal-day ${!cell.inMonth ? "cal-day--out" : ""} ${isToday ? "cal-day--today" : ""} ${isSelected ? "cal-day--selected" : ""} ${holidayName ? "cal-day--holiday" : ""}`}
-                      onClick={() => setSelectedDay(cell.iso)}
-                      title={holidayName || undefined}
-                    >
-                      {holidayName && <span className="cal-holiday-dot" />}
-                      <div className="cal-day-num">{cell.day}</div>
-                      <div className="cal-day-tasks">
-                        {dayTasks.slice(0, 3).map((t) => (
-                          <div key={t.id} className={`cal-chip ${t.status === "Hecho" ? "cal-chip--done" : ""}`}>
-                            <span className="cal-chip-dot" style={{ background: areaMap[t.areaId]?.color || "var(--text-faint)" }} />
-                            <span className="cal-chip-text">{t.title}</span>
-                          </div>
-                        ))}
-                        {dayTasks.length > 3 && <div className="cal-more">+{dayTasks.length - 3} más</div>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {calView === "semana" && (
-              <div className="cal-grid">
-                {weekDays.map((d, i) => (
-                  <div key={`h-${d.iso}`} className="cal-weekday">{(weekStartsSunday ? WEEKDAY_LABELS_SUN_FIRST : WEEKDAY_LABELS)[i]} <span className="mono">{d.day}</span></div>
-                ))}
-                {weekDays.map((cell) => {
-                  const dayTasks = tasksByDate[cell.iso] || [];
-                  const isToday = cell.iso === todayISO();
-                  return (
-                    <div
-                      key={cell.iso}
-                      className={`cal-day cal-day--week ${isToday ? "cal-day--today" : ""}`}
-                      onClick={() => { setSelectedDay(cell.iso); setDayAnchor(cell.iso); setCalView("dia"); }}
-                    >
-                      <div className="cal-day-tasks">
-                        {dayTasks.slice(0, 8).map((t) => (
-                          <div key={t.id} className={`cal-chip ${t.status === "Hecho" ? "cal-chip--done" : ""}`}>
-                            <span className="cal-chip-dot" style={{ background: areaMap[t.areaId]?.color || "var(--text-faint)" }} />
-                            <span className="cal-chip-text">{t.title}</span>
-                          </div>
-                        ))}
-                        {dayTasks.length > 8 && <div className="cal-more">+{dayTasks.length - 8} más</div>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className={`cal-detail ${calView === "dia" ? "cal-detail--day" : ""}`}>
-              <div className="cal-detail-head">
-                <span>{fmtDate(focusedDate)}</span>
-                <span className="cal-detail-count mono">{(tasksByDate[focusedDate] || []).length} tareas</span>
-              </div>
-              <div className="cal-detail-add">
-                <input
-                  type="text"
-                  placeholder="Agregar tarea para este día..."
-                  value={dayQuickTitle}
-                  onChange={(e) => setDayQuickTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addTaskForFocusedDay()}
-                />
-                <button className="procesar-btn" onClick={addTaskForFocusedDay}><Plus size={14} /></button>
-              </div>
-              <div className="cal-detail-list">
-                {(tasksByDate[focusedDate] || []).length === 0 && (
-                  <div className="empty-state">No hay tareas para este día.</div>
-                )}
-                {(tasksByDate[focusedDate] || []).map((t) => (
-                  <div className="cal-detail-row" key={t.id}>
-                    <span className="side-dot" style={{ background: areaMap[t.areaId]?.color }} />
-                    <span className={`task-title ${t.status === "Hecho" ? "task-title--done" : ""}`} style={{ flex: 1 }}>{t.title}</span>
-                    <StatusPill value={t.status} onClick={() => cycleStatus(t.id)} />
-                    <PriorityBadge value={t.priority} onClick={() => cyclePriority(t.id)} />
-                    <button className="row-del" onClick={() => removeTask(t.id)}><Trash2 size={14} /></button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          renderCalendar()
         )}
 
         {toast && <div className="toast">{toast}</div>}
@@ -4531,7 +5220,7 @@ export default function TaskApp() {
                 <div className="settings-row">
                   <div>
                     <div className="settings-row-title">Feriados en el calendario</div>
-                    <div className="settings-row-desc">Marca feriados de fecha fija. Los que dependen de Pascua todavía no.</div>
+                    <div className="settings-row-desc">Marca los feriados nacionales. En Argentina incluye también los móviles (Carnaval, Semana Santa, trasladables).</div>
                   </div>
                   <select className="settings-select" value={holidayCountry} onChange={(e) => setHolidayCountry(e.target.value)}>
                     <option value="none">Ninguno</option>

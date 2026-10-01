@@ -1,12 +1,12 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #root { height: 100%; overflow: hidden; overscroll-behavior: none; }
-body { background: #0c0e11; position: fixed; inset: 0; width: 100%; }
+body { background: #0f1116; position: fixed; inset: 0; width: 100%; }
 
 :root {
-  --bg: #0c0e11;
-  --surface: #14171b;
-  --surface-2: #191d22;
-  --border: #262a30;
+  --bg: #0f1116;
+  --surface: #161921;
+  --surface-2: #1d212b;
+  --border: rgba(255,255,255,0.075);
   --text: #e9ebee;
   --text-dim: #8d94a0;
   --text-faint: #565d68;
