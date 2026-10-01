@@ -2414,7 +2414,10 @@ export default function TaskApp() {
     };
   }
 
-  function renderMobileTaskRow(t) {
+  function renderMobileTaskRow(t, opts) {
+    const showArea = !!(opts && typeof opts === "object" && opts.showArea);
+    const rowArea = showArea ? areaMap[t.areaId] : null;
+    const rowProject = rowArea && t.projectId ? rowArea.projects?.find((p) => p.id === t.projectId) : null;
     const done = t.status === "Hecho";
     const completing = mobileCompletingIds.has(t.id);
     const revealed = mobileRevealedTaskId === t.id;
@@ -2487,6 +2490,12 @@ export default function TaskApp() {
           ) : t.note ? (
             <span className="m-task-note" onClick={() => setEditingNoteId(t.id)}>{t.note}</span>
           ) : null}
+          {rowArea && (
+            <span className="m-task-area" onClick={() => openMobileArea(rowArea.id)}>
+              <span className="m-task-area-dot" style={{ background: rowArea.color }} />
+              {rowArea.name}{rowProject ? ` / ${rowProject.name}` : ""}
+            </span>
+          )}
         </div>
         {revealed ? (
           <button className="m-row-delete" onClick={() => setDeleteTarget({ type: "task", id: t.id })}>
@@ -2541,16 +2550,10 @@ export default function TaskApp() {
 
     return (
       <div className="m-screen">
-        <div className="m-brand-row"><span className="brand-dot" />Task App</div>
-        <div className="m-topbar">
-          <div className="m-filters">
-            <button className={`m-filter ${mobileExpandedFilter === "pendientes" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("pendientes")}>
-              Pendientes <b>{pendientes}</b>
-            </button>
-            <button className={`m-filter ${mobileExpandedFilter === "vencidas" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("vencidas")}>
-              Vencidas <b className={vencidas > 0 ? "m-filter-bad" : ""}>{vencidas}</b>
-            </button>
-            <span style={{ flex: 1 }} />
+        <div className="m-brand-row">
+          <span className="brand-dot" />
+          <span className="m-brand-name">Task App</span>
+          <span style={{ flex: 1 }} />
             <button className={`m-hide-done ${hideCompleted ? "m-hide-done--active" : ""}`} onClick={() => setHideCompleted((v) => !v)} title="Ocultar hechas">
               {hideCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
             </button>
@@ -2567,6 +2570,15 @@ export default function TaskApp() {
                 <CloudOff size={19} />
               </button>
             )}
+        </div>
+        <div className="m-topbar">
+          <div className="m-filters">
+            <button className={`m-filter ${mobileExpandedFilter === "pendientes" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("pendientes")}>
+              <span>Pendientes</span> <b>{pendientes}</b>
+            </button>
+            <button className={`m-filter ${mobileExpandedFilter === "vencidas" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("vencidas")}>
+              <span>Vencidas</span> <b className={vencidas > 0 ? "m-filter-bad" : ""}>{vencidas}</b>
+            </button>
           </div>
           <div className="m-search-row">
             <div className="m-search">
@@ -2594,10 +2606,10 @@ export default function TaskApp() {
             <>
               {matchedAreas.length === 0 && matchedTasks.length === 0 && <div className="m-empty-hint">Sin resultados para "{mobileSearch}"</div>}
               {matchedAreas.map((a) => (
-                <button key={a.id} className="m-area-card" onClick={() => openMobileArea(a.id)}>
+                <button key={a.id} className="m-area-card" style={{ "--chip": a.color }} onClick={() => openMobileArea(a.id)}>
                   <span className="m-area-bar" style={{ background: a.color }} />
                   <span className="m-area-name">{a.name.toUpperCase()}</span>
-                  <span className="m-area-count">{mobileCountFor(a.id)} pendientes</span>
+                  <span className="m-area-count"><b>{mobileCountFor(a.id)}</b> pend.</span>
                   <ChevronRight size={16} className="m-area-chevron" />
                 </button>
               ))}
@@ -2614,14 +2626,20 @@ export default function TaskApp() {
             </>
           ) : mobileExpandedFilter ? (
             <>
-              {filteredTasks.length === 0 && <div className="m-empty-hint">Nada por acá.</div>}
-              {filteredTasks.map(renderMobileTaskRow)}
+              {filteredTasks.length === 0
+                ? <div className="m-empty-hint">{mobileExpandedFilter === "vencidas" ? "No hay nada vencido." : "No hay pendientes."}</div>
+                : (
+                  <div className="m-card">
+                    <div className="m-card-title">{mobileExpandedFilter === "vencidas" ? "Vencidas" : "Pendientes"} <span>{filteredTasks.length}</span></div>
+                    {filteredTasks.map((t) => renderMobileTaskRow(t, { showArea: true }))}
+                  </div>
+                )}
             </>
           ) : (
             <>
               {visibleOrderedAreas.map((a) => (
                 renamingAreaId === a.id ? (
-                  <div key={a.id} className="m-area-card m-area-card--renaming">
+                  <div key={a.id} className="m-area-card m-area-card--renaming" style={{ "--chip": a.color }}>
                     <span className="m-area-bar" style={{ background: a.color }} />
                     <input
                       ref={renameInputRef}
@@ -2633,7 +2651,7 @@ export default function TaskApp() {
                     />
                   </div>
                 ) : mobileRevealedAreaId === a.id ? (
-                  <div key={a.id} className="m-area-card m-area-card--revealed">
+                  <div key={a.id} className="m-area-card m-area-card--revealed" style={{ "--chip": a.color }}>
                     <span className="m-area-bar" style={{ background: a.color }} />
                     <span className="m-area-name">{a.name.toUpperCase()}</span>
                     <button className="m-row-delete" onClick={() => setDeleteTarget({ type: "area", id: a.id })}>
@@ -2641,7 +2659,7 @@ export default function TaskApp() {
                     </button>
                   </div>
                 ) : (
-                  <button key={a.id} className="m-area-card" onClick={() => openMobileArea(a.id)} {...areaSwipeHandlers(a.id)}>
+                  <button key={a.id} className="m-area-card" style={{ "--chip": a.color }} onClick={() => openMobileArea(a.id)} {...areaSwipeHandlers(a.id)}>
                     <span className="m-area-bar" style={{ background: a.color }} />
                     <span
                       role="button"
@@ -2651,7 +2669,7 @@ export default function TaskApp() {
                       <Star size={15} fill={a.favorite ? "currentColor" : "none"} />
                     </span>
                     <span className="m-area-name">{a.name.toUpperCase()}</span>
-                    <span className="m-area-count">{mobileCountFor(a.id)} pendientes</span>
+                    <span className="m-area-count"><b>{mobileCountFor(a.id)}</b> pend.</span>
                     <ChevronRight size={16} className="m-area-chevron" />
                   </button>
                 )
@@ -2766,13 +2784,13 @@ export default function TaskApp() {
     const generalTasks = tasks.filter((t) => t.areaId === area.id && !t.projectId).filter(matchesVisibility);
 
     return (
-      <div className="m-screen" {...mobileSwipeHandlers(true)}>
-        <div className="m-header">
-          <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={18} /></button>
+      <div className="m-screen" style={{ "--chip": area.color }} {...mobileSwipeHandlers(true)}>
+        <div className="m-header m-header--tinted">
+          <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={20} /></button>
           <span className="m-header-dot" style={{ background: area.color }} />
           <span className="m-header-title">{area.name.toUpperCase()}</span>
           <button className={`m-hide-done ${hideCompleted ? "m-hide-done--active" : ""}`} onClick={() => setHideCompleted((v) => !v)} title="Ocultar hechas">
-            {hideCompleted ? <CheckCircle2 size={13} /> : <Circle size={13} />}
+            {hideCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
           </button>
         </div>
         <div className="m-search-row m-search-row--sub">
@@ -2802,7 +2820,9 @@ export default function TaskApp() {
               {tasks.filter((t) => t.areaId === area.id && matchesQuery(t)).length === 0 && (
                 <div className="m-empty-hint">Sin resultados para "{mobileSearch}"</div>
               )}
-              {tasks.filter((t) => t.areaId === area.id && matchesQuery(t)).map(renderMobileTaskRow)}
+              {tasks.filter((t) => t.areaId === area.id && matchesQuery(t)).length > 0 && (
+                <div className="m-card">{tasks.filter((t) => t.areaId === area.id && matchesQuery(t)).map((t) => renderMobileTaskRow(t))}</div>
+              )}
             </>
           ) : (
             <>
@@ -2811,7 +2831,7 @@ export default function TaskApp() {
             const collapsed = projectTaskCount > 0 && mobileCollapsedProjects.has(p.id);
             const isRenaming = renamingProjectId === p.id && renameProjectAreaId === area.id;
             return (
-              <div key={p.id} className="m-project-block">
+              <div key={p.id} className={`m-project-block ${collapsed ? "m-project-block--collapsed" : ""}`}>
                 {isRenaming ? (
                   <div className="m-project-header">
                     <span className="m-project-dot" style={{ background: area.color }} />
@@ -2832,6 +2852,7 @@ export default function TaskApp() {
                     <span className="m-project-dot" style={{ background: area.color }} />
                     <span className="m-project-name" style={{ color: area.color }}>{p.name.toUpperCase()}</span>
                     <span className="m-project-count">{projectTaskCount}</span>
+                    {projectTaskCount > 0 && <ChevronDown size={15} className="m-project-chev" />}
                     <span className="m-project-actions">
                       <button className="m-project-action-btn" onClick={(e) => { e.stopPropagation(); startRenameProject(area.id, p); }}>
                         <Pencil size={14} />
@@ -2844,7 +2865,7 @@ export default function TaskApp() {
                 )}
                 {!collapsed && (
                   <div className="m-project-tasks">
-                    {tasksOf(p.id).map(renderMobileTaskRow)}
+                    {tasksOf(p.id).map((t) => renderMobileTaskRow(t))}
                     {renderMobileInlineAdd(area.id, p.id)}
                   </div>
                 )}
@@ -2852,8 +2873,15 @@ export default function TaskApp() {
             );
           })}
 
-          <div className="m-project-block">
-            {generalTasks.map(renderMobileTaskRow)}
+          <div className={`m-project-block m-project-block--general ${projects.length > 0 && generalTasks.length === 0 ? "m-project-block--bare" : ""}`}>
+            {projects.length > 0 && generalTasks.length > 0 && (
+              <div className="m-project-header m-project-header--static">
+                <span className="m-project-dot" style={{ background: "var(--text-faint)" }} />
+                <span className="m-project-name m-project-name--general">Sin proyecto</span>
+                <span className="m-project-count">{generalTasks.length}</span>
+              </div>
+            )}
+            {generalTasks.map((t) => renderMobileTaskRow(t))}
             {renderMobileInlineAdd(area.id, null)}
           </div>
             </>
@@ -2904,9 +2932,9 @@ export default function TaskApp() {
     }
 
     return (
-      <div className="m-screen" {...mobileSwipeHandlers(true)}>
-        <div className="m-header">
-          <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={18} /></button>
+      <div className="m-screen" style={{ "--chip": area?.color }} {...mobileSwipeHandlers(true)}>
+        <div className="m-header m-header--tinted">
+          <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={20} /></button>
           <span className="m-header-dot" style={{ background: area?.color }} />
           <span className="m-header-title">{area?.name?.toUpperCase()}{project ? ` · ${project.name}` : ""}</span>
           <button
@@ -2927,7 +2955,7 @@ export default function TaskApp() {
           />
           <textarea
             className="m-task-detail-note"
-            placeholder="Nota..."
+            placeholder="Agregar una nota…"
             defaultValue={t.note}
             onBlur={(e) => setNote(t.id, e.target.value)}
           />
@@ -2972,7 +3000,7 @@ export default function TaskApp() {
       return (
         <div className="m-screen">
           <div className="m-header">
-            <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={18} /></button>
+            <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={20} /></button>
             <span className="m-header-title">Nueva nota</span>
           </div>
           <div className="m-empty-hint">Creá un área primero.</div>
@@ -2990,7 +3018,7 @@ export default function TaskApp() {
     return (
       <div className="m-screen" {...mobileSwipeHandlers(true)}>
         <div className="m-header m-header--sticky">
-          <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={18} /></button>
+          <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={20} /></button>
           <select
             className="m-quickadd-area-select"
             value={area.id}
@@ -4389,141 +4417,205 @@ export default function TaskApp() {
           .tt-root { border-radius: 0; min-height: 100vh; min-height: 100dvh; height: 100dvh; font-size: 13px; }
           .tt-root, .tt-root * { touch-action: manipulation; }
 
-          /* Shared with desktop: modals (login, settings, encryption) fill
-             more of a small screen instead of floating as a small card. */
-          .auth-card, .modal-card { max-width: 100%; width: 100%; border-radius: 14px 14px 0 0; }
+          /* Modals become bottom sheets with stacked rows. */
+          .modal-overlay { align-items: flex-end; }
+          .auth-card, .modal-card { max-width: 100%; width: 100%; border-radius: 22px 22px 0 0; padding: 22px 20px calc(22px + env(safe-area-inset-bottom)); }
+          .modal-card::before { content: ""; display: block; width: 38px; height: 4px; border-radius: 4px; background: var(--border-strong); margin: -10px auto 16px; }
+          .settings-modal-card { width: 100%; max-width: 100%; max-height: 90dvh; padding: 22px 20px calc(24px + env(safe-area-inset-bottom)); }
+          .settings-modal-card .settings-row { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px 0; }
+          .settings-modal-card .settings-row-desc { max-width: none; }
+          .settings-modal-card .settings-select { width: 100%; min-width: 0; padding: 11px 12px; font-size: 14px; border-radius: 10px; }
+          .settings-modal-card .settings-row > div[style] { width: 100%; }
+          .settings-modal-card .settings-row > div[style] > .modal-btn { flex: 1; justify-content: center; }
+          .settings-modal-card .settings-row > .modal-btn { justify-content: center; padding: 11px 14px; }
+          .modal-actions .modal-btn { padding: 11px 16px; font-size: 14px; }
+
+          /* urgent bar: a floating strip above the home indicator */
           .urgent-bar {
-            height: 60px; min-height: 60px; max-height: 60px; padding: 12px 16px; align-items: center; overflow: hidden;
+            height: auto; min-height: 0; max-height: none; margin: 0 12px calc(10px + env(safe-area-inset-bottom));
+            padding: 11px 14px; border: none; border-radius: 14px; background: var(--surface-2);
+            box-shadow: 0 0 0 1px var(--border), 0 -8px 24px -12px rgba(0,0,0,0.6); overflow: hidden; gap: 10px;
           }
-          .urgent-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .urgent-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 550; }
+          .urgent-empty { font-size: 13px; }
           .urgent-bar--tappable { cursor: pointer; }
-          .urgent-bar--tappable:active { background: var(--surface-2); }
+          .urgent-bar--tappable:active { background: var(--surface-3); }
 
-          /* ---- mobile drill-down screens (areas / área / nota) ---- */
-          .m-screen { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-          .m-list { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 10px 12px 16px; display: flex; flex-direction: column; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+          /* ---- screens ---- */
+          .m-screen { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--bg); }
+          .m-list {
+            flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 6px 12px 16px;
+            display: flex; flex-direction: column; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+          }
           .m-list--dragging { overflow-y: hidden; touch-action: none; }
-          .m-empty-hint { padding: 30px 10px; text-align: center; color: var(--text-faint); font-size: 13px; }
+          .m-empty-hint { padding: 40px 10px; text-align: center; color: var(--text-faint); font-size: 14px; }
 
+          /* home header */
           .m-brand-row {
-            display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px; font-weight: 600;
-            font-size: 16px; letter-spacing: -0.01em; color: var(--text); border-bottom: 1px solid var(--border); flex-shrink: 0;
+            display: flex; align-items: center; gap: 8px; padding: calc(12px + env(safe-area-inset-top)) 12px 6px 18px; flex-shrink: 0;
+            font-weight: 650; font-size: 16px; letter-spacing: -0.01em; color: var(--text);
           }
-          .m-topbar { padding: 12px 14px 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-          .m-filters { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+          .m-brand-name { font-size: 19px; font-weight: 700; letter-spacing: -0.025em; margin-left: 2px; }
+          .m-brand-row .brand-dot { width: 10px; height: 10px; }
+          .m-topbar { padding: 8px 12px 10px; flex-shrink: 0; }
+          .m-filters { display: flex; gap: 8px; margin-bottom: 10px; }
           .m-filter {
-            background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
-            border-radius: 9px; padding: 7px 12px; font-size: 12.5px; display: flex; gap: 5px; cursor: pointer;
+            flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 11px 14px;
+            color: var(--text-dim); font-size: 13.5px; font-weight: 500; transition: background .12s, border-color .12s;
           }
-          .m-filter b { color: var(--text); }
+          .m-filter b { color: var(--text); font-size: 20px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
           .m-filter-bad { color: var(--alta) !important; }
-          .m-filter--active { border-color: rgba(242,171,67,0.5); background: rgba(242,171,67,0.1); }
+          .m-filter--active { border-color: var(--amber-line); background: var(--amber-soft); color: var(--text); }
           .m-search-row { display: flex; gap: 8px; }
-          .m-search-row--sub { padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-          .m-search { flex: 1; display: flex; align-items: center; gap: 7px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 9px 12px; }
-          .m-search-icon { color: var(--text-faint); flex-shrink: 0; }
-          .m-search input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14px; }
-          .m-search input::placeholder { color: var(--text-faint); }
-          .m-add-btn { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; border: none; background: var(--amber); color: #1b1304; display: flex; align-items: center; justify-content: center; }
-
-          .m-area-card {
-            width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
-            background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-            padding: 15px 14px; margin-bottom: 9px; color: var(--text);
+          .m-search-row--sub { padding: 4px 12px 10px; flex-shrink: 0; }
+          .m-search {
+            flex: 1; display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 0 13px; height: 44px; transition: border-color .12s;
           }
-          .m-area-bar { width: 3px; align-self: stretch; border-radius: 2px; flex-shrink: 0; }
-          .m-area-name { flex: 1; font-size: 15.5px; font-weight: 700; letter-spacing: 0.01em; }
-          .m-area-count { font-size: 12px; color: var(--text-faint); background: var(--surface-2); padding: 4px 9px; border-radius: 7px; flex-shrink: 0; }
+          .m-search:focus-within { border-color: var(--amber-line); }
+          .m-search-icon { color: var(--text-faint); flex-shrink: 0; }
+          .m-search input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--text); font-size: 15px; }
+          .m-search input::placeholder { color: var(--text-faint); }
+          .m-add-btn {
+            width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: none; background: var(--amber); color: #1b1304;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px -6px rgba(242,171,67,0.55);
+          }
+          .m-add-btn:active { transform: scale(0.96); }
+          .m-hide-done, .m-top-iconbtn {
+            width: 40px; height: 40px; padding: 0 !important; display: flex; align-items: center; justify-content: center;
+            background: none !important; border: none !important; border-radius: 12px !important; color: var(--text-dim);
+          }
+          .m-hide-done:active, .m-top-iconbtn:active { background: var(--surface-2) !important; }
+          .m-hide-done--active, .m-fav-btn--active { color: var(--amber) !important; }
+
+          /* area cards */
+          .m-area-card {
+            position: relative; width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; overflow: hidden;
+            padding: 17px 14px 17px 16px; margin-bottom: 8px; color: var(--text);
+            background: linear-gradient(100deg, color-mix(in srgb, var(--chip, transparent) 14%, var(--surface)) 0%, var(--surface) 55%);
+            border: 1px solid var(--border); border-radius: 16px; transition: transform .1s, background .12s;
+          }
+          .m-area-card:active { transform: scale(0.985); }
+          .m-area-bar { width: 4px; align-self: stretch; border-radius: 4px; flex-shrink: 0; box-shadow: 0 0 14px -1px var(--chip, transparent); }
+          .m-area-card .fav-star-btn { padding: 4px; margin: -4px -2px; }
+          .m-area-name { flex: 1; min-width: 0; font-size: 15.5px; font-weight: 700; letter-spacing: 0.03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .m-area-count { display: flex; align-items: baseline; gap: 4px; font-size: 12px; color: var(--text-faint); flex-shrink: 0; }
+          .m-area-count b { font-size: 16px; font-weight: 650; color: var(--text-dim); font-variant-numeric: tabular-nums; }
           .m-area-chevron { color: var(--text-faint); flex-shrink: 0; }
 
           .m-search-task {
             width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
-            background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-            padding: 12px 14px; margin-bottom: 7px; color: var(--text);
+            background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+            padding: 13px 14px; margin-bottom: 6px; color: var(--text);
           }
-          .m-search-task-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-          .m-search-task-title { flex: 1; font-size: 13.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          .m-search-task-area { font-size: 11px; color: var(--text-faint); flex-shrink: 0; }
+          .m-search-task-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+          .m-search-task-title { flex: 1; font-size: 14.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .m-search-task-area { font-size: 12px; color: var(--text-faint); flex-shrink: 0; }
 
           .m-inline-add, .m-add-area-btn {
-            width: 100%; background: var(--surface); border: 1px dashed var(--border); border-radius: 10px;
-            padding: 13px 14px; color: var(--text-dim); font-size: 14px; display: flex; align-items: center; gap: 8px;
+            width: 100%; background: none; border: 1.5px dashed var(--border-strong); border-radius: 14px;
+            padding: 14px; color: var(--text-dim); font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;
           }
-          .m-inline-add input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14px; }
+          .m-inline-add { justify-content: flex-start; border-style: solid; border-color: var(--amber-line); background: var(--surface); }
+          .m-inline-add input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 15px; }
 
           .m-account-row {
             display: flex; align-items: center; justify-content: space-between; gap: 10px;
-            margin-top: auto; padding: 12px 14px 0; border-top: 1px solid var(--border);
+            margin-top: auto; padding: 18px 6px 4px;
           }
           .m-account-name { font-size: 13px; color: var(--text-dim); font-weight: 600; }
-          .m-account-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
-          .m-account-logout { background: none; border: 1px solid var(--border); border-radius: 7px; color: var(--text-faint); font-size: 11.5px; padding: 6px 12px; }
+          .m-account-sub { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
+          .m-account-logout { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; color: var(--text-dim); font-size: 12.5px; padding: 8px 14px; }
 
+          /* sub-screen header (área, tarea, nota rápida) */
           .m-header {
-            display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+            display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+            padding: calc(8px + env(safe-area-inset-top)) 10px 8px 6px; min-height: 58px;
           }
-          .m-header--sticky { position: sticky; top: 0; z-index: 5; background: var(--bg); }
-          .m-back { background: none; border: none; color: var(--text-dim); padding: 4px; display: flex; flex-shrink: 0; }
-          .m-header-dot { width: 3px; height: 20px; border-radius: 2px; flex-shrink: 0; }
-          .m-header-title { font-size: 16px; font-weight: 700; flex: 1; }
+          .m-header--tinted { background: linear-gradient(180deg, color-mix(in srgb, var(--chip, transparent) 16%, var(--bg)) 0%, var(--bg) 100%); }
+          .m-header--sticky { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border); }
+          .m-back { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 12px; color: var(--text); }
+          .m-back:active { background: var(--surface-2); }
+          .m-header-dot { width: 4px; height: 22px; border-radius: 4px; flex-shrink: 0; box-shadow: 0 0 12px -1px var(--chip, transparent); }
+          .m-header-title { flex: 1; min-width: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: 4px; }
           .m-header-count { font-size: 12px; color: var(--text-faint); }
           .m-header-crumb { flex: 1; font-size: 13px; color: var(--text-dim); }
-          .m-header-delete { background: none; border: none; color: var(--text-faint); padding: 4px; }
-          .m-hide-done { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-faint); border-radius: 8px; padding: 8px 11px; display: flex; }
-          .m-top-iconbtn { padding: 8px 10px !important; }
-          .m-hide-done--active { color: var(--amber); border-color: rgba(242,171,67,0.4); }
+          .m-header-delete { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 12px; color: var(--text-faint); }
+          .m-header-delete:active { background: rgba(242,95,85,0.12); color: var(--alta); }
 
-          .m-project-block { margin-bottom: 18px; }
+          /* cards that group task rows */
+          .m-card, .m-project-block {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+            padding: 2px 4px 2px 6px; margin-bottom: 12px;
+          }
+          .m-card-title { display: flex; align-items: center; gap: 8px; padding: 12px 8px 6px; font-size: 13px; font-weight: 650; color: var(--text-dim); }
+          .m-card-title span { font-size: 12px; color: var(--text-faint); background: var(--surface-2); padding: 2px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+          .m-project-block--bare { background: none; border: none; padding: 0; }
+          .m-project-block--bare .m-inline-add-zone { border: 1.5px dashed var(--border-strong); border-radius: 14px; }
+          .m-project-block--bare .m-inline-add-zone::before { content: "+ Tarea sin proyecto"; }
           .m-project-tasks { }
-          .m-project-header { display: flex; align-items: center; gap: 8px; padding: 8px 4px; cursor: pointer; }
-          .m-project-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-          .m-project-name { flex: 1; font-size: 17.5px; font-weight: 700; letter-spacing: 0.03em; }
-          .m-project-count { font-size: 12px; color: var(--text-faint); background: var(--surface-2); padding: 2px 7px; border-radius: 999px; }
-          .m-project-actions { display: flex; align-items: center; gap: 2px; }
-          .m-project-action-btn { background: none; border: none; padding: 6px; border-radius: 6px; color: var(--text-faint); display: flex; }
+          .m-project-header { display: flex; align-items: center; gap: 8px; padding: 10px 4px 8px 6px; cursor: pointer; }
+          .m-project-header--static { cursor: default; }
+          .m-project-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+          .m-project-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 750; letter-spacing: 0.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .m-project-name--general { color: var(--text-dim); letter-spacing: 0.01em; font-weight: 650; }
+          .m-project-count { font-size: 12px; font-weight: 600; color: var(--text-dim); background: var(--surface-2); padding: 2px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+          .m-project-chev { color: var(--text-faint); transition: transform .15s; }
+          .m-project-block--collapsed .m-project-chev { transform: rotate(-90deg); }
+          .m-project-actions { display: flex; align-items: center; gap: 0; }
+          .m-project-action-btn { background: none; border: none; padding: 8px; border-radius: 9px; color: var(--text-faint); display: flex; }
+          .m-project-action-btn:active { background: var(--surface-2); }
 
-          .m-inline-add-zone { min-height: 34px; cursor: text; -webkit-user-select: none; user-select: none; }
-          .m-inline-add-zone--active { min-height: 0; padding: 6px 4px; }
+          .m-inline-add-zone { min-height: 44px; cursor: text; -webkit-user-select: none; user-select: none; display: flex; align-items: center; padding: 0 10px; }
+          .m-inline-add-zone::before { content: "+ Agregar tarea"; font-size: 13.5px; color: var(--text-faint); }
+          .m-inline-add-zone--active { min-height: 0; padding: 6px 2px 8px; }
+          .m-inline-add-zone--active::before { content: none; }
           .m-inline-add-zone--active input {
-            width: 100%; background: var(--surface-2); border: 1px solid rgba(242,171,67,0.4); border-radius: 8px;
-            outline: none; color: var(--text); font-size: 15px; padding: 9px 11px; font-family: inherit;
+            width: 100%; background: var(--bg); border: 1px solid var(--amber-line); border-radius: 10px;
+            outline: none; color: var(--text); font-size: 15.5px; padding: 11px 12px; font-family: inherit;
           }
 
           .m-area-card--renaming { background: var(--surface-2); }
           .m-inline-rename-input {
-            flex: 1; background: none; border: none; border-bottom: 1px solid var(--amber); outline: none;
+            flex: 1; min-width: 0; background: none; border: none; border-bottom: 1.5px solid var(--amber); outline: none;
             color: var(--text); font-size: 15.5px; font-weight: 700; font-family: inherit; padding: 2px 0;
           }
-          .m-inline-rename-input--project { font-size: 14.5px; }
+          .m-inline-rename-input--project { font-size: 15px; }
 
+          /* task rows */
           .m-task-row {
-            display: flex; align-items: center; gap: 16px; padding: 12px 4px;
-            border-bottom: 1px solid var(--border); position: relative; background: var(--bg);
+            display: flex; align-items: center; gap: 10px; padding: 12px 0 12px 2px; position: relative;
+            border-bottom: 1px solid var(--border); background: transparent;
             -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
           }
-          .m-task-row--dragging { z-index: 10; box-shadow: 0 6px 16px rgba(0,0,0,0.4); border-radius: 8px; background: var(--surface); pointer-events: none; }
+          .m-card > .m-task-row:last-child { border-bottom: none; }
+          .m-task-row--dragging { z-index: 10; box-shadow: 0 10px 28px rgba(0,0,0,0.55); border-radius: 12px; background: var(--surface-3); pointer-events: none; border-bottom-color: transparent; }
           .m-task-row--drop-before { box-shadow: inset 0 2px 0 0 var(--amber); }
           .m-task-row--drop-after { box-shadow: inset 0 -2px 0 0 var(--amber); }
-          .m-task-row--revealed { background: rgba(242,95,85,0.06); }
-          .m-area-card--revealed { background: rgba(242,95,85,0.06); }
+          .m-task-row--revealed { background: rgba(242,95,85,0.07); border-radius: 12px; }
+          .m-area-card--revealed { background: rgba(242,95,85,0.07); }
           .m-row-delete {
             flex-shrink: 0; display: flex; align-items: center; gap: 6px; background: var(--alta); color: #fff;
-            border: none; border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 700;
+            border: none; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; font-weight: 650;
           }
           .m-check { background: none; border: none; padding: 6px; flex-shrink: 0; display: flex; }
+          .m-check svg { width: 21px; height: 21px; }
           .m-task-main { flex: 1; min-width: 0; text-align: left; background: none; border: none; display: flex; flex-direction: column; gap: 3px; }
-          .m-task-title { font-size: 16.5px; color: var(--text); line-height: 1.35; }
+          .m-task-title { font-size: 16px; color: var(--text); line-height: 1.35; }
           .m-task-title--done { color: var(--text-faint); text-decoration: line-through; }
           .m-task-title-input, .m-task-note-input {
-            width: 100%; background: var(--surface-2); border: 1px solid rgba(242,171,67,0.4); border-radius: 6px;
-            outline: none; color: var(--text); font-size: 15px; padding: 5px 7px 5px 3px; font-family: inherit;
+            width: 100%; background: var(--bg); border: 1px solid var(--amber-line); border-radius: 8px;
+            outline: none; color: var(--text); font-size: 15.5px; padding: 6px 8px; font-family: inherit;
           }
           .m-task-note { font-size: 13px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .m-task-note--empty { color: var(--text-faint); opacity: 0.6; }
-          .m-task-icons { display: flex; flex-direction: row; gap: 10px; align-items: center; flex-shrink: 0; background: none; border: none; padding: 10px 4px; }
-          .m-drag-handle { flex-shrink: 0; background: none; border: none; padding: 10px 4px 10px 8px; color: var(--text-faint); touch-action: none; }
+          .m-task-area { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .m-task-area-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+          .m-task-icons { display: flex; flex-direction: row; gap: 9px; align-items: center; flex-shrink: 0; background: none; border: none; padding: 10px 2px; }
+          .m-drag-handle { flex-shrink: 0; background: none; border: none; padding: 10px 6px 10px 4px; color: var(--text-faint); opacity: 0.7; touch-action: none; }
           .m-flag { color: var(--text-faint); }
-          .m-flag--Baja { color: var(--text-faint); }
+          .m-flag--Baja { color: var(--text-faint); opacity: 0.6; }
           .m-flag--Media { color: var(--amber); }
           .m-flag--Alta { color: var(--alta); }
           .m-cal { color: var(--text-faint); }
@@ -4532,42 +4624,48 @@ export default function TaskApp() {
           .m-info-icon--doing { color: var(--blue); }
           .m-info-icon--done { color: var(--good); }
 
-          .m-sticky-footer { padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0; }
+          .m-sticky-footer { padding: 4px 12px 10px; flex-shrink: 0; }
 
-          .m-task-detail { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 16px 16px 30px; }
+          /* task detail */
+          .m-task-detail { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 6px 16px 30px; }
           .m-task-detail-title {
             width: 100%; background: none; border: none; outline: none; color: var(--text);
-            font-size: 20px; font-weight: 700; margin-bottom: 12px; font-family: inherit;
-            resize: none; overflow: hidden; line-height: 1.35;
+            font-size: 23px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 14px; font-family: inherit;
+            resize: none; overflow: hidden; line-height: 1.3; padding: 0;
           }
           .m-task-detail-note {
-            width: 100%; min-height: 64px; background: var(--surface); border: 1px solid var(--border);
-            border-radius: 10px; padding: 12px; color: var(--text-dim); font-size: 15.5px; line-height: 1.5;
+            width: 100%; min-height: 84px; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 13px 14px; color: var(--text-dim); font-size: 15.5px; line-height: 1.5;
             outline: none; resize: vertical; font-family: inherit;
           }
-          .m-task-detail-options { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 14px; }
-          .m-option-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 2px; }
-          .m-option-label { font-size: 14.5px; color: var(--text-faint); }
+          .m-task-detail-note:focus { border-color: var(--amber-line); color: var(--text); }
+          .m-task-detail-note::placeholder { color: var(--text-faint); }
+          .m-task-detail-options { margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 0 14px; }
+          .m-option-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+          .m-option-row:last-child { border-bottom: none; }
+          .m-option-label { font-size: 15px; color: var(--text-dim); }
           .m-option-select {
-            background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
-            color: var(--text); font-size: 14.5px; padding: 8px 10px; max-width: 60%;
+            background: var(--surface-2); border: none; border-radius: 10px;
+            color: var(--text); font-size: 15px; padding: 9px 12px; max-width: 60%; font-family: inherit;
           }
-          .m-task-detail .datefield-btn { font-size: 15px; padding: 9px 13px; }
-          .m-task-detail .pill { font-size: 14px; padding: 7px 12px; }
-          .m-task-detail .badge { font-size: 14px; padding: 7px 12px; }
+          .m-task-detail .datefield-btn { font-size: 15px; padding: 9px 13px; background: var(--surface-2); border-radius: 10px; }
+          .m-task-detail .pill { font-size: 14px; padding: 8px 13px; }
+          .m-task-detail .badge { font-size: 14px; padding: 8px 13px; border-radius: 10px; }
 
-          /* ---- quick-note-entry screen ---- */
+          /* quick add */
           .m-quickadd-area-select {
-            flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
-            color: var(--text); font-size: 14px; font-weight: 700; padding: 8px 10px;
+            flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+            color: var(--text); font-size: 14.5px; font-weight: 650; padding: 10px 12px; font-family: inherit;
           }
-          .m-quickadd-item { display: flex; align-items: center; gap: 10px; padding: 11px 4px; font-size: 14px; color: var(--text-dim); border-bottom: 1px solid var(--border); }
-          .m-quickadd-input-row { display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+          .m-quickadd-item { display: flex; align-items: center; gap: 12px; padding: 13px 6px; font-size: 15px; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+          .m-quickadd-input-row { display: flex; gap: 8px; padding: 12px; flex-shrink: 0; }
           .m-quickadd-input-row input {
-            flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-            padding: 12px 14px; color: var(--text); font-size: 15px; outline: none;
+            flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--amber-line); border-radius: 14px;
+            padding: 14px 15px; color: var(--text); font-size: 16px; outline: none; font-family: inherit;
           }
-          .m-quickadd-send { width: 44px; flex-shrink: 0; border-radius: 10px; border: none; background: var(--amber); color: #1b1304; display: flex; align-items: center; justify-content: center; }
+          .m-quickadd-send { width: 52px; flex-shrink: 0; border-radius: 14px; border: none; background: var(--amber); color: #1b1304; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px -6px rgba(242,171,67,0.55); }
+
+          .toast { bottom: calc(86px + env(safe-area-inset-bottom)); }
         }
       `}</style>
 
