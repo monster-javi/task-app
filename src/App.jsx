@@ -2311,6 +2311,10 @@ export default function TaskApp() {
     };
   }
 
+  function renderMobileBrandBar() {
+    return <div className="m-brand-row"><span className="brand-dot" /><span className="m-brand-name">Task App</span></div>;
+  }
+
   function renderMobileUrgentBar() {
     const current = urgentItems[urgentIndex] || null;
     return (
@@ -2318,6 +2322,7 @@ export default function TaskApp() {
         className={`urgent-bar ${current ? "urgent-bar--tappable" : ""}`}
         onClick={() => { if (current) openMobileTask(current.task.id, current.task.areaId); }}
       >
+        <span className={`urgent-label ${current ? "" : "urgent-label--off"}`}><span className={`urgent-dot ${current ? "" : "urgent-dot--off"}`} />URGENTES</span>
         {current ? (
           <>
             <span className={`urgent-chip urgent-chip--${current.kind}`}>
@@ -2550,43 +2555,38 @@ export default function TaskApp() {
 
     return (
       <div className="m-screen">
-        <div className="m-brand-row">
-          <span className="brand-dot" />
-          <span className="m-brand-name">Task App</span>
-          <span style={{ flex: 1 }} />
-            <button className={`m-hide-done ${hideCompleted ? "m-hide-done--active" : ""}`} onClick={() => setHideCompleted((v) => !v)} title="Ocultar hechas">
+        {renderMobileBrandBar()}
+        <div className="m-topbar">
+          <div className="m-toolbar">
+            <div className="m-search">
+              <Search size={15} className="m-search-icon" />
+              <input placeholder="Buscar" value={mobileSearch} onChange={(e) => { setMobileSearch(e.target.value); setMobileExpandedFilter(null); }} />
+            </div>
+            <button className={`m-pill ${hideCompleted ? "m-pill--on" : ""}`} onClick={() => setHideCompleted((v) => !v)} title="Ocultar hechas">
               {hideCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
             </button>
             <button
-              className={`iconbtn icon-only m-top-iconbtn ${areaFilterMode !== "off" ? "m-fav-btn--active" : ""}`}
+              className={`m-pill ${areaFilterMode !== "off" ? "m-pill--on" : ""}`}
               onClick={() => setAreaFilterMode((m) => (m === "off" ? "solo" : m === "solo" ? "mute" : "off"))}
               title={areaFilterMode === "solo" ? "Mostrando solo favoritas — tocá para ocultarlas" : areaFilterMode === "mute" ? "Ocultando favoritas — tocá para apagar el filtro" : "Filtro de favoritas (apagado)"}
             >
-              {areaFilterMode === "mute" ? <EyeOff size={19} /> : <Star size={19} fill={areaFilterMode === "solo" ? "currentColor" : "none"} />}
+              {areaFilterMode === "mute" ? <EyeOff size={18} /> : <Star size={18} fill={areaFilterMode === "solo" ? "currentColor" : "none"} />}
             </button>
-            <button className="iconbtn icon-only m-top-iconbtn" onClick={() => setShowSettingsPanel(true)} title="Configuración"><Settings size={19} /></button>
-            {syncError && (
-              <button className="iconbtn icon-only m-top-iconbtn sync-indicator--error" onClick={saveDiff} title="No se pudo guardar — tocá para reintentar">
-                <CloudOff size={19} />
-              </button>
+            <button className="m-add-btn" onClick={openMobileQuickAdd} title="Nueva nota"><Plus size={20} strokeWidth={2.6} /></button>
+            {syncError ? (
+              <button className="m-pill m-pill--bad" onClick={saveDiff} title="No se pudo guardar — tocá para reintentar"><CloudOff size={18} /></button>
+            ) : (
+              <button className="m-pill" onClick={() => setShowSettingsPanel(true)} title="Configuración"><Settings size={18} /></button>
             )}
+          </div>
         </div>
-        <div className="m-topbar">
-          <div className="m-filters">
-            <button className={`m-filter ${mobileExpandedFilter === "pendientes" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("pendientes")}>
-              <span>Pendientes</span> <b>{pendientes}</b>
-            </button>
-            <button className={`m-filter ${mobileExpandedFilter === "vencidas" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("vencidas")}>
-              <span>Vencidas</span> <b className={vencidas > 0 ? "m-filter-bad" : ""}>{vencidas}</b>
-            </button>
-          </div>
-          <div className="m-search-row">
-            <div className="m-search">
-              <Search size={14} className="m-search-icon" />
-              <input placeholder="Buscar áreas, proyectos o notas..." value={mobileSearch} onChange={(e) => { setMobileSearch(e.target.value); setMobileExpandedFilter(null); }} />
-            </div>
-            <button className="m-add-btn" onClick={openMobileQuickAdd} title="Nueva nota"><Plus size={18} /></button>
-          </div>
+        <div className="m-filters">
+          <button className={`m-filter ${mobileExpandedFilter === "pendientes" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("pendientes")}>
+            Pendientes <b>{pendientes}</b>
+          </button>
+          <button className={`m-filter ${mobileExpandedFilter === "vencidas" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("vencidas")}>
+            Vencidas <b className={vencidas > 0 ? "m-filter-bad" : ""}>{vencidas}</b>
+          </button>
         </div>
 
         <div
@@ -2609,7 +2609,7 @@ export default function TaskApp() {
                 <button key={a.id} className="m-area-card" style={{ "--chip": a.color }} onClick={() => openMobileArea(a.id)}>
                   <span className="m-area-bar" style={{ background: a.color }} />
                   <span className="m-area-name">{a.name.toUpperCase()}</span>
-                  <span className="m-area-count"><b>{mobileCountFor(a.id)}</b> pend.</span>
+                  <span className="m-area-count">{mobileCountFor(a.id)}</span>
                   <ChevronRight size={16} className="m-area-chevron" />
                 </button>
               ))}
@@ -2669,7 +2669,7 @@ export default function TaskApp() {
                       <Star size={15} fill={a.favorite ? "currentColor" : "none"} />
                     </span>
                     <span className="m-area-name">{a.name.toUpperCase()}</span>
-                    <span className="m-area-count"><b>{mobileCountFor(a.id)}</b> pend.</span>
+                    <span className="m-area-count">{mobileCountFor(a.id)}</span>
                     <ChevronRight size={16} className="m-area-chevron" />
                   </button>
                 )
@@ -2704,18 +2704,17 @@ export default function TaskApp() {
               ) : (
                 <button className="m-add-area-btn" onClick={() => setMobileAddingArea(true)}><Plus size={14} /> Nueva área</button>
               )}
-
-              <div className="m-account-row">
-                <div>
-                  <div className="m-account-name">{session?.user?.is_anonymous ? "Invitado" : (maskEmail(session?.user?.email))}</div>
-                  <div className="m-account-sub">{session?.user?.is_anonymous ? "Sesión de prueba" : "Con cuenta"}</div>
-                </div>
-                <button className="m-account-logout" onClick={handleLogout}>Salir</button>
-              </div>
             </>
           )}
         </div>
 
+        <div className="m-session-bar">
+          <div>
+            <div className="m-account-name">{session?.user?.is_anonymous ? "Invitado" : (maskEmail(session?.user?.email))}</div>
+            <div className="m-account-sub">{session?.user?.is_anonymous ? "Sesión de prueba" : "Con cuenta"}</div>
+          </div>
+          <button className="m-account-logout" onClick={handleLogout}>Salir</button>
+        </div>
         {renderMobileUrgentBar()}
       </div>
     );
@@ -2785,20 +2784,22 @@ export default function TaskApp() {
 
     return (
       <div className="m-screen" style={{ "--chip": area.color }} {...mobileSwipeHandlers(true)}>
-        <div className="m-header m-header--tinted">
-          <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={20} /></button>
-          <span className="m-header-dot" style={{ background: area.color }} />
-          <span className="m-header-title">{area.name.toUpperCase()}</span>
-          <button className={`m-hide-done ${hideCompleted ? "m-hide-done--active" : ""}`} onClick={() => setHideCompleted((v) => !v)} title="Ocultar hechas">
-            {hideCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-          </button>
-        </div>
-        <div className="m-search-row m-search-row--sub">
-          <div className="m-search">
-            <Search size={14} className="m-search-icon" />
-            <input placeholder="Buscar notas en esta área..." value={mobileSearch} onChange={(e) => setMobileSearch(e.target.value)} />
+        {renderMobileBrandBar()}
+        <div className="m-topbar">
+          <div className="m-toolbar">
+            <button className="m-pill" onClick={mobileGoBack} title="Volver"><ChevronLeft size={20} /></button>
+            <div className="m-header-title"><span className="m-header-dot" style={{ background: area.color }} />{area.name.toUpperCase()}</div>
+            <button className={`m-pill ${hideCompleted ? "m-pill--on" : ""}`} onClick={() => setHideCompleted((v) => !v)} title="Ocultar hechas">
+              {hideCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+            </button>
           </div>
-          <button className="m-add-btn" onClick={openMobileQuickAdd} title="Nueva nota"><Plus size={18} /></button>
+          <div className="m-toolbar">
+            <div className="m-search">
+              <Search size={15} className="m-search-icon" />
+              <input placeholder="Buscar en esta área" value={mobileSearch} onChange={(e) => setMobileSearch(e.target.value)} />
+            </div>
+            <button className="m-add-btn" onClick={openMobileQuickAdd} title="Nueva nota"><Plus size={20} strokeWidth={2.6} /></button>
+          </div>
         </div>
 
         <div
@@ -2834,7 +2835,6 @@ export default function TaskApp() {
               <div key={p.id} className={`m-project-block ${collapsed ? "m-project-block--collapsed" : ""}`}>
                 {isRenaming ? (
                   <div className="m-project-header">
-                    <span className="m-project-dot" style={{ background: area.color }} />
                     <input
                       className="m-inline-rename-input m-inline-rename-input--project"
                       value={renameProjectValue}
@@ -2849,10 +2849,9 @@ export default function TaskApp() {
                     className="m-project-header"
                     onClick={() => toggleMobileProjectCollapse(p.id)}
                   >
-                    <span className="m-project-dot" style={{ background: area.color }} />
-                    <span className="m-project-name" style={{ color: area.color }}>{p.name.toUpperCase()}</span>
+                    <span className="m-project-name">{p.name.toUpperCase()}</span>
                     <span className="m-project-count">{projectTaskCount}</span>
-                    {projectTaskCount > 0 && <ChevronDown size={15} className="m-project-chev" />}
+                    {projectTaskCount > 0 && <ChevronDown size={16} className="m-project-chev" />}
                     <span className="m-project-actions">
                       <button className="m-project-action-btn" onClick={(e) => { e.stopPropagation(); startRenameProject(area.id, p); }}>
                         <Pencil size={14} />
@@ -2876,8 +2875,7 @@ export default function TaskApp() {
           <div className={`m-project-block m-project-block--general ${projects.length > 0 && generalTasks.length === 0 ? "m-project-block--bare" : ""}`}>
             {projects.length > 0 && generalTasks.length > 0 && (
               <div className="m-project-header m-project-header--static">
-                <span className="m-project-dot" style={{ background: "var(--text-faint)" }} />
-                <span className="m-project-name m-project-name--general">Sin proyecto</span>
+                <span className="m-project-name m-project-name--general">SIN PROYECTO</span>
                 <span className="m-project-count">{generalTasks.length}</span>
               </div>
             )}
@@ -2933,14 +2931,13 @@ export default function TaskApp() {
 
     return (
       <div className="m-screen" style={{ "--chip": area?.color }} {...mobileSwipeHandlers(true)}>
-        <div className="m-header m-header--tinted">
-          <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={20} /></button>
-          <span className="m-header-dot" style={{ background: area?.color }} />
-          <span className="m-header-title">{area?.name?.toUpperCase()}{project ? ` · ${project.name}` : ""}</span>
-          <button
-            className="m-header-delete"
-            onClick={() => { setDeleteTarget({ type: "task", id: t.id }); }}
-          ><Trash2 size={16} /></button>
+        {renderMobileBrandBar()}
+        <div className="m-topbar">
+          <div className="m-toolbar">
+            <button className="m-pill" onClick={mobileGoBack} title="Volver"><ChevronLeft size={20} /></button>
+            <div className="m-header-title"><span className="m-header-dot" style={{ background: area?.color }} />{area?.name?.toUpperCase()}{project ? ` · ${project.name}` : ""}</div>
+            <button className="m-pill m-pill--danger" onClick={() => { setDeleteTarget({ type: "task", id: t.id }); }} title="Eliminar tarea"><Trash2 size={17} /></button>
+          </div>
         </div>
 
         <div className="m-task-detail">
@@ -2990,6 +2987,7 @@ export default function TaskApp() {
             )}
           </div>
         </div>
+        {renderMobileUrgentBar()}
       </div>
     );
   }
@@ -3017,8 +3015,10 @@ export default function TaskApp() {
     }
     return (
       <div className="m-screen" {...mobileSwipeHandlers(true)}>
-        <div className="m-header m-header--sticky">
-          <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={20} /></button>
+        {renderMobileBrandBar()}
+        <div className="m-topbar">
+        <div className="m-toolbar">
+          <button className="m-pill" onClick={mobileGoBack} title="Volver"><ChevronLeft size={20} /></button>
           <select
             className="m-quickadd-area-select"
             value={area.id}
@@ -3036,6 +3036,7 @@ export default function TaskApp() {
               {area.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
+        </div>
         </div>
         <div className="m-quickadd-input-row">
           <input
@@ -4412,208 +4413,221 @@ export default function TaskApp() {
           color: var(--text); font-size: 13px; padding: 8px 10px; flex-shrink: 0;
         }
 
-        /* ---------- MOBILE ---------- */
+        /* ---------- MOBILE ----------
+           Same shell and measurements as Gastos App v146 mobile: thin brand
+           bar, a toolbar of 40px bordered square buttons, section cards with a
+           3px colored left edge, 14px rows, session bar + alert bar pinned at
+           the bottom, centered modals. Task keeps its amber accent. */
         @media (max-width: 820px) {
           .tt-root { border-radius: 0; min-height: 100vh; min-height: 100dvh; height: 100dvh; font-size: 13px; }
           .tt-root, .tt-root * { touch-action: manipulation; }
 
-          /* Modals become bottom sheets with stacked rows. */
-          .modal-overlay { align-items: flex-end; }
-          .auth-card, .modal-card { max-width: 100%; width: 100%; border-radius: 22px 22px 0 0; padding: 22px 20px calc(22px + env(safe-area-inset-bottom)); }
-          .modal-card::before { content: ""; display: block; width: 38px; height: 4px; border-radius: 4px; background: var(--border-strong); margin: -10px auto 16px; }
-          .settings-modal-card { width: 100%; max-width: 100%; max-height: 90dvh; padding: 22px 20px calc(24px + env(safe-area-inset-bottom)); }
-          .settings-modal-card .settings-row { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px 0; }
-          .settings-modal-card .settings-row-desc { max-width: none; }
-          .settings-modal-card .settings-select { width: 100%; min-width: 0; padding: 11px 12px; font-size: 14px; border-radius: 10px; }
-          .settings-modal-card .settings-row > div[style] { width: 100%; }
-          .settings-modal-card .settings-row > div[style] > .modal-btn { flex: 1; justify-content: center; }
-          .settings-modal-card .settings-row > .modal-btn { justify-content: center; padding: 11px 14px; }
-          .modal-actions .modal-btn { padding: 11px 16px; font-size: 14px; }
+          /* ---- modals: centered cards, like Gastos ---- */
+          .modal-overlay { align-items: center; padding: 12px; }
+          .auth-card, .modal-card { max-width: 100%; width: 100%; border-radius: 16px; padding: 20px; }
+          .settings-modal-card { width: 100%; max-width: 100%; max-height: 85vh; padding: 18px 16px; border-radius: 16px; }
+          .settings-modal-card .modal-title { font-size: 18px; margin-bottom: 10px; }
+          .settings-modal-card .settings-group-title { margin: 20px 2px 6px; font-size: 12px; }
+          .settings-modal-card .settings-group-title:first-of-type { margin-top: 4px; }
+          .settings-modal-card .settings-row {
+            padding: 14px; margin-top: 8px; gap: 12px; border-top: none; border-radius: 10px; background: var(--surface);
+          }
+          .settings-modal-card .settings-row-title { font-size: 15px; margin-bottom: 0; }
+          .settings-modal-card .settings-row-desc { display: none; }
+          .settings-modal-card .settings-select { min-width: 0; max-width: 150px; font-size: 13px; }
+          .settings-modal-card .modal-btn { font-size: 13px; padding: 7px 10px; white-space: nowrap; flex-shrink: 0; }
+          .settings-modal-card .settings-row > div[style] { flex-wrap: wrap; justify-content: flex-end; }
+          .modal-actions .modal-btn { padding: 9px 14px; font-size: 14px; }
 
-          /* urgent bar: a floating strip above the home indicator */
+          /* ---- bottom bars: session + urgentes (Gastos: sesión + ALERTAS) ---- */
+          .m-session-bar {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-shrink: 0;
+            padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border);
+          }
+          .m-account-name { font-size: 13.5px; color: var(--text-dim); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .m-account-sub { font-size: 11.5px; color: var(--text-faint); }
+          .m-account-logout { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text-faint); font-size: 11.5px; padding: 5px 10px; flex-shrink: 0; }
           .urgent-bar {
-            height: auto; min-height: 0; max-height: none; margin: 0 12px calc(10px + env(safe-area-inset-bottom));
-            padding: 11px 14px; border: none; border-radius: 14px; background: var(--surface-2);
-            box-shadow: 0 0 0 1px var(--border), 0 -8px 24px -12px rgba(0,0,0,0.6); overflow: hidden; gap: 10px;
+            height: 46px; min-height: 46px; max-height: 46px; padding: 0 16px calc(0px + env(safe-area-inset-bottom)); gap: 10px;
+            background: var(--side); border-top: 1px solid var(--border); overflow: hidden; box-sizing: content-box;
           }
-          .urgent-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 550; }
-          .urgent-empty { font-size: 13px; }
+          .urgent-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 600; }
+          .urgent-empty { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .urgent-bar--tappable { cursor: pointer; }
-          .urgent-bar--tappable:active { background: var(--surface-3); }
+          .urgent-bar--tappable:active { background: var(--surface); }
 
-          /* ---- screens ---- */
+          /* ---- shell ---- */
           .m-screen { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--bg); }
-          .m-list {
-            flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 6px 12px 16px;
-            display: flex; flex-direction: column; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
-          }
-          .m-list--dragging { overflow-y: hidden; touch-action: none; }
-          .m-empty-hint { padding: 40px 10px; text-align: center; color: var(--text-faint); font-size: 14px; }
-
-          /* home header */
           .m-brand-row {
-            display: flex; align-items: center; gap: 8px; padding: calc(12px + env(safe-area-inset-top)) 12px 6px 18px; flex-shrink: 0;
-            font-weight: 650; font-size: 16px; letter-spacing: -0.01em; color: var(--text);
+            display: flex; align-items: center; gap: 8px; flex-shrink: 0; min-height: 42px;
+            padding: calc(8px + env(safe-area-inset-top)) 10px 8px 12px;
+            background: var(--surface); border-bottom: 1px solid var(--border);
+            font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: var(--text);
           }
-          .m-brand-name { font-size: 19px; font-weight: 700; letter-spacing: -0.025em; margin-left: 2px; }
-          .m-brand-row .brand-dot { width: 10px; height: 10px; }
-          .m-topbar { padding: 8px 12px 10px; flex-shrink: 0; }
-          .m-filters { display: flex; gap: 8px; margin-bottom: 10px; }
-          .m-filter {
-            flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer;
-            background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 11px 14px;
-            color: var(--text-dim); font-size: 13.5px; font-weight: 500; transition: background .12s, border-color .12s;
+          .m-brand-row .brand-dot { width: 8px; height: 8px; border-radius: 50%; transform: none; box-shadow: 0 0 0 3px rgba(242,171,67,0.15); }
+          .m-topbar { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+          .m-toolbar { display: flex; align-items: center; gap: 8px; }
+          .m-pill {
+            width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 9px; color: var(--text-dim);
           }
-          .m-filter b { color: var(--text); font-size: 20px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
-          .m-filter-bad { color: var(--alta) !important; }
-          .m-filter--active { border-color: var(--amber-line); background: var(--amber-soft); color: var(--text); }
-          .m-search-row { display: flex; gap: 8px; }
-          .m-search-row--sub { padding: 4px 12px 10px; flex-shrink: 0; }
+          .m-pill:active { background: var(--surface-2); color: var(--text); }
+          .m-pill--on { background: rgba(242,171,67,0.10); border-color: var(--amber-line); color: var(--amber); }
+          .m-pill--bad { color: var(--alta); border-color: rgba(242,95,85,0.45); }
+          .m-pill--danger { color: var(--text-faint); }
+          .m-pill--danger:active { color: var(--alta); background: rgba(242,95,85,0.12); }
           .m-search {
-            flex: 1; display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border);
-            border-radius: 12px; padding: 0 13px; height: 44px; transition: border-color .12s;
+            flex: 1; min-width: 0; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 12px;
+            background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; transition: border-color .12s;
           }
-          .m-search:focus-within { border-color: var(--amber-line); }
+          .m-search:focus-within { border-color: var(--amber); }
           .m-search-icon { color: var(--text-faint); flex-shrink: 0; }
           .m-search input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--text); font-size: 15px; }
           .m-search input::placeholder { color: var(--text-faint); }
           .m-add-btn {
-            width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: none; background: var(--amber); color: #1b1304;
-            display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px -6px rgba(242,171,67,0.55);
+            width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+            background: var(--amber); color: #1a1200; border: none; border-radius: 9px;
           }
-          .m-add-btn:active { transform: scale(0.96); }
-          .m-hide-done, .m-top-iconbtn {
-            width: 40px; height: 40px; padding: 0 !important; display: flex; align-items: center; justify-content: center;
-            background: none !important; border: none !important; border-radius: 12px !important; color: var(--text-dim);
+          .m-header-title {
+            flex: 1; min-width: 0; height: 40px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 10px;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+            font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
           }
-          .m-hide-done:active, .m-top-iconbtn:active { background: var(--surface-2) !important; }
-          .m-hide-done--active, .m-fav-btn--active { color: var(--amber) !important; }
+          .m-header-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-          /* area cards */
-          .m-area-card {
-            position: relative; width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; overflow: hidden;
-            padding: 17px 14px 17px 16px; margin-bottom: 8px; color: var(--text);
-            background: linear-gradient(100deg, color-mix(in srgb, var(--chip, transparent) 14%, var(--surface)) 0%, var(--surface) 55%);
-            border: 1px solid var(--border); border-radius: 16px; transition: transform .1s, background .12s;
+          /* fallback header (quick add without areas) */
+          .m-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+          .m-back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; color: var(--text-dim); }
+
+          /* Pendientes / Vencidas: the row Gastos uses for the month nav */
+          .m-filters { display: flex; gap: 10px; padding: 18px 12px 12px; flex-shrink: 0; }
+          .m-filter {
+            flex: 1; height: 40px; display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text); font-size: 15px; font-weight: 700;
           }
-          .m-area-card:active { transform: scale(0.985); }
-          .m-area-bar { width: 4px; align-self: stretch; border-radius: 4px; flex-shrink: 0; box-shadow: 0 0 14px -1px var(--chip, transparent); }
-          .m-area-card .fav-star-btn { padding: 4px; margin: -4px -2px; }
-          .m-area-name { flex: 1; min-width: 0; font-size: 15.5px; font-weight: 700; letter-spacing: 0.03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          .m-area-count { display: flex; align-items: baseline; gap: 4px; font-size: 12px; color: var(--text-faint); flex-shrink: 0; }
-          .m-area-count b { font-size: 16px; font-weight: 650; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+          .m-filter b { font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+          .m-filter-bad { color: var(--alta) !important; }
+          .m-filter--active { background: var(--amber-soft); border-color: var(--amber); }
+          .m-filter--active b { color: var(--text); }
+
+          .m-list {
+            flex: 1; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 0 12px 30px;
+            display: flex; flex-direction: column; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+          }
+          .m-topbar + .m-list { padding-top: 18px; }
+          .m-list--dragging { overflow-y: hidden; touch-action: none; }
+          .m-empty-hint { padding: 30px 10px; text-align: center; color: var(--text-faint); font-size: 14px; }
+
+          /* ---- area list: each area is a Gastos section header ---- */
+          .m-area-card {
+            width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; flex-shrink: 0;
+            padding: 12px 14px; margin-bottom: 12px; color: var(--text);
+            background: linear-gradient(90deg, color-mix(in srgb, var(--chip, transparent) 10%, transparent), transparent 55%), var(--surface);
+            border: 1px solid var(--border); border-left: 3px solid var(--chip, var(--border)); border-radius: 12px;
+          }
+          .m-area-card:active { background-color: var(--surface-2); }
+          .m-area-bar { display: none; }
+          .m-area-card .fav-star-btn { padding: 2px; margin: -2px 0; }
+          .m-area-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .m-area-count {
+            flex-shrink: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px;
+            font-size: 14px; font-weight: 600; color: var(--text-dim); font-variant-numeric: tabular-nums;
+          }
           .m-area-chevron { color: var(--text-faint); flex-shrink: 0; }
 
           .m-search-task {
             width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
             background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-            padding: 13px 14px; margin-bottom: 6px; color: var(--text);
+            padding: 14px; margin-bottom: 8px; color: var(--text); flex-shrink: 0;
           }
-          .m-search-task-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-          .m-search-task-title { flex: 1; font-size: 14.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .m-search-task-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+          .m-search-task-title { flex: 1; font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
           .m-search-task-area { font-size: 12px; color: var(--text-faint); flex-shrink: 0; }
 
           .m-inline-add, .m-add-area-btn {
-            width: 100%; background: none; border: 1.5px dashed var(--border-strong); border-radius: 14px;
-            padding: 14px; color: var(--text-dim); font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 14px;
+            background: none; border: 1px dashed var(--border-strong); border-radius: 12px; color: var(--text-dim); font-size: 14px;
           }
-          .m-inline-add { justify-content: flex-start; border-style: solid; border-color: var(--amber-line); background: var(--surface); }
+          .m-inline-add { justify-content: flex-start; border-style: solid; border-color: var(--amber); background: var(--surface); }
           .m-inline-add input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 15px; }
-
-          .m-account-row {
-            display: flex; align-items: center; justify-content: space-between; gap: 10px;
-            margin-top: auto; padding: 18px 6px 4px;
-          }
-          .m-account-name { font-size: 13px; color: var(--text-dim); font-weight: 600; }
-          .m-account-sub { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
-          .m-account-logout { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; color: var(--text-dim); font-size: 12.5px; padding: 8px 14px; }
-
-          /* sub-screen header (área, tarea, nota rápida) */
-          .m-header {
-            display: flex; align-items: center; gap: 8px; flex-shrink: 0;
-            padding: calc(8px + env(safe-area-inset-top)) 10px 8px 6px; min-height: 58px;
-          }
-          .m-header--tinted { background: linear-gradient(180deg, color-mix(in srgb, var(--chip, transparent) 16%, var(--bg)) 0%, var(--bg) 100%); }
-          .m-header--sticky { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border); }
-          .m-back { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 12px; color: var(--text); }
-          .m-back:active { background: var(--surface-2); }
-          .m-header-dot { width: 4px; height: 22px; border-radius: 4px; flex-shrink: 0; box-shadow: 0 0 12px -1px var(--chip, transparent); }
-          .m-header-title { flex: 1; min-width: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: 4px; }
-          .m-header-count { font-size: 12px; color: var(--text-faint); }
-          .m-header-crumb { flex: 1; font-size: 13px; color: var(--text-dim); }
-          .m-header-delete { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 12px; color: var(--text-faint); }
-          .m-header-delete:active { background: rgba(242,95,85,0.12); color: var(--alta); }
-
-          /* cards that group task rows */
-          .m-card, .m-project-block {
-            background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-            padding: 2px 4px 2px 6px; margin-bottom: 12px;
-          }
-          .m-card-title { display: flex; align-items: center; gap: 8px; padding: 12px 8px 6px; font-size: 13px; font-weight: 650; color: var(--text-dim); }
-          .m-card-title span { font-size: 12px; color: var(--text-faint); background: var(--surface-2); padding: 2px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
-          .m-project-block--bare { background: none; border: none; padding: 0; }
-          .m-project-block--bare .m-inline-add-zone { border: 1.5px dashed var(--border-strong); border-radius: 14px; }
-          .m-project-block--bare .m-inline-add-zone::before { content: "+ Tarea sin proyecto"; }
-          .m-project-tasks { }
-          .m-project-header { display: flex; align-items: center; gap: 8px; padding: 10px 4px 8px 6px; cursor: pointer; }
-          .m-project-header--static { cursor: default; }
-          .m-project-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-          .m-project-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 750; letter-spacing: 0.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          .m-project-name--general { color: var(--text-dim); letter-spacing: 0.01em; font-weight: 650; }
-          .m-project-count { font-size: 12px; font-weight: 600; color: var(--text-dim); background: var(--surface-2); padding: 2px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
-          .m-project-chev { color: var(--text-faint); transition: transform .15s; }
-          .m-project-block--collapsed .m-project-chev { transform: rotate(-90deg); }
-          .m-project-actions { display: flex; align-items: center; gap: 0; }
-          .m-project-action-btn { background: none; border: none; padding: 8px; border-radius: 9px; color: var(--text-faint); display: flex; }
-          .m-project-action-btn:active { background: var(--surface-2); }
-
-          .m-inline-add-zone { min-height: 44px; cursor: text; -webkit-user-select: none; user-select: none; display: flex; align-items: center; padding: 0 10px; }
-          .m-inline-add-zone::before { content: "+ Agregar tarea"; font-size: 13.5px; color: var(--text-faint); }
-          .m-inline-add-zone--active { min-height: 0; padding: 6px 2px 8px; }
-          .m-inline-add-zone--active::before { content: none; }
-          .m-inline-add-zone--active input {
-            width: 100%; background: var(--bg); border: 1px solid var(--amber-line); border-radius: 10px;
-            outline: none; color: var(--text); font-size: 15.5px; padding: 11px 12px; font-family: inherit;
-          }
-
           .m-area-card--renaming { background: var(--surface-2); }
+          .m-area-card--revealed { background: rgba(242,95,85,0.07); }
           .m-inline-rename-input {
             flex: 1; min-width: 0; background: none; border: none; border-bottom: 1.5px solid var(--amber); outline: none;
-            color: var(--text); font-size: 15.5px; font-weight: 700; font-family: inherit; padding: 2px 0;
+            color: var(--text); font-size: 15px; font-weight: 700; font-family: inherit; padding: 2px 0;
           }
           .m-inline-rename-input--project { font-size: 15px; }
 
-          /* task rows */
+          /* ---- cards with rows (Gastos .mobileSection / .mobileRow) ---- */
+          .m-card, .m-project-block {
+            flex-shrink: 0; margin-bottom: 12px; overflow: hidden;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+          }
+          .m-card-title, .m-project-header {
+            display: flex; align-items: center; gap: 8px; padding: 12px 14px;
+            border-left: 3px solid var(--chip, var(--border));
+            background: linear-gradient(90deg, color-mix(in srgb, var(--chip, transparent) 10%, transparent), transparent 55%);
+            font-size: 15px; font-weight: 700; color: var(--text);
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; cursor: pointer;
+          }
+          .m-card { --chip: var(--amber); }
+          .m-card-title { cursor: default; }
+          .m-card-title span, .m-project-count {
+            background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 2px 9px;
+            font-size: 13px; font-weight: 600; color: var(--text-dim); font-variant-numeric: tabular-nums;
+          }
+          .m-project-header--static { cursor: default; border-left-color: var(--border-strong); background: none; }
+          .m-project-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .m-project-name--general { color: var(--text-dim); }
+          .m-project-chev { color: var(--text-faint); transition: transform .15s; }
+          .m-project-block--collapsed .m-project-chev { transform: rotate(-90deg); }
+          .m-project-actions { display: flex; align-items: center; }
+          .m-project-action-btn { background: none; border: none; padding: 6px; border-radius: 7px; color: var(--text-faint); display: flex; }
+          .m-project-block--bare { background: none; border: none; overflow: visible; }
+          .m-project-block--bare .m-inline-add-zone { border: 1px dashed var(--border-strong); border-radius: 12px; justify-content: center; }
+          .m-project-block--bare .m-inline-add-zone::before { content: "+ Tarea sin proyecto"; }
+          .m-project-tasks { }
+
+          .m-inline-add-zone { min-height: 48px; display: flex; align-items: center; padding: 0 14px; cursor: text; -webkit-user-select: none; user-select: none; }
+          .m-inline-add-zone::before { content: "+ Agregar tarea"; font-size: 14px; color: var(--text-faint); }
+          .m-inline-add-zone--active { min-height: 0; padding: 8px 10px; }
+          .m-inline-add-zone--active::before { content: none; }
+          .m-inline-add-zone--active input {
+            width: 100%; background: var(--surface-2); border: 1px solid var(--amber); border-radius: 8px;
+            outline: none; color: var(--text); font-size: 15.5px; padding: 9px 11px; font-family: inherit;
+          }
+
+          /* task row = Gastos mobileRow */
           .m-task-row {
-            display: flex; align-items: center; gap: 10px; padding: 12px 0 12px 2px; position: relative;
+            display: flex; align-items: center; gap: 10px; padding: 14px 6px 14px 10px; position: relative;
             border-bottom: 1px solid var(--border); background: transparent;
             -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
           }
           .m-card > .m-task-row:last-child { border-bottom: none; }
-          .m-task-row--dragging { z-index: 10; box-shadow: 0 10px 28px rgba(0,0,0,0.55); border-radius: 12px; background: var(--surface-3); pointer-events: none; border-bottom-color: transparent; }
+          .m-task-row--dragging { z-index: 10; box-shadow: 0 10px 28px rgba(0,0,0,0.55); border-radius: 10px; background: var(--surface-2); pointer-events: none; }
           .m-task-row--drop-before { box-shadow: inset 0 2px 0 0 var(--amber); }
           .m-task-row--drop-after { box-shadow: inset 0 -2px 0 0 var(--amber); }
-          .m-task-row--revealed { background: rgba(242,95,85,0.07); border-radius: 12px; }
-          .m-area-card--revealed { background: rgba(242,95,85,0.07); }
+          .m-task-row--revealed { background: rgba(242,95,85,0.07); }
           .m-row-delete {
             flex-shrink: 0; display: flex; align-items: center; gap: 6px; background: var(--alta); color: #fff;
-            border: none; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; font-weight: 650;
+            border: none; border-radius: 8px; padding: 9px 13px; font-size: 13.5px; font-weight: 650;
           }
-          .m-check { background: none; border: none; padding: 6px; flex-shrink: 0; display: flex; }
-          .m-check svg { width: 21px; height: 21px; }
+          .m-check { background: none; border: none; padding: 2px; flex-shrink: 0; display: flex; }
+          .m-check svg { width: 20px; height: 20px; }
           .m-task-main { flex: 1; min-width: 0; text-align: left; background: none; border: none; display: flex; flex-direction: column; gap: 3px; }
-          .m-task-title { font-size: 16px; color: var(--text); line-height: 1.35; }
+          .m-task-title { font-size: 15.5px; color: var(--text); line-height: 1.35; }
           .m-task-title--done { color: var(--text-faint); text-decoration: line-through; }
           .m-task-title-input, .m-task-note-input {
-            width: 100%; background: var(--bg); border: 1px solid var(--amber-line); border-radius: 8px;
-            outline: none; color: var(--text); font-size: 15.5px; padding: 6px 8px; font-family: inherit;
+            width: 100%; background: var(--surface-2); border: 1px solid var(--amber); border-radius: 8px;
+            outline: none; color: var(--text); font-size: 15px; padding: 6px 8px; font-family: inherit;
           }
           .m-task-note { font-size: 13px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .m-task-note--empty { color: var(--text-faint); opacity: 0.6; }
           .m-task-area { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .m-task-area-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-          .m-task-icons { display: flex; flex-direction: row; gap: 9px; align-items: center; flex-shrink: 0; background: none; border: none; padding: 10px 2px; }
-          .m-drag-handle { flex-shrink: 0; background: none; border: none; padding: 10px 6px 10px 4px; color: var(--text-faint); opacity: 0.7; touch-action: none; }
+          .m-task-icons { display: flex; flex-direction: row; gap: 9px; align-items: center; flex-shrink: 0; background: none; border: none; padding: 8px 2px; }
+          .m-drag-handle { flex-shrink: 0; background: none; border: none; padding: 8px 4px; color: var(--text-faint); opacity: 0.7; touch-action: none; }
           .m-flag { color: var(--text-faint); }
           .m-flag--Baja { color: var(--text-faint); opacity: 0.6; }
           .m-flag--Media { color: var(--amber); }
@@ -4624,48 +4638,50 @@ export default function TaskApp() {
           .m-info-icon--doing { color: var(--blue); }
           .m-info-icon--done { color: var(--good); }
 
-          .m-sticky-footer { padding: 4px 12px 10px; flex-shrink: 0; }
+          .m-sticky-footer { padding: 10px 12px; flex-shrink: 0; border-top: 1px solid var(--border); }
+          .m-sticky-footer .m-add-area-btn { border-style: solid; border-color: var(--border); background: var(--surface); border-radius: 10px; }
 
-          /* task detail */
-          .m-task-detail { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 6px 16px 30px; }
+          /* ---- task detail ---- */
+          .m-task-detail { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 18px 12px 30px; }
           .m-task-detail-title {
-            width: 100%; background: none; border: none; outline: none; color: var(--text);
-            font-size: 23px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 14px; font-family: inherit;
-            resize: none; overflow: hidden; line-height: 1.3; padding: 0;
+            width: 100%; background: none; border: none; outline: none; color: var(--text); padding: 0 2px;
+            font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 12px; font-family: inherit;
+            resize: none; overflow: hidden; line-height: 1.3;
           }
           .m-task-detail-note {
-            width: 100%; min-height: 84px; background: var(--surface); border: 1px solid var(--border);
-            border-radius: 14px; padding: 13px 14px; color: var(--text-dim); font-size: 15.5px; line-height: 1.5;
+            width: 100%; min-height: 80px; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 12px 14px; color: var(--text-dim); font-size: 15px; line-height: 1.5;
             outline: none; resize: vertical; font-family: inherit;
           }
-          .m-task-detail-note:focus { border-color: var(--amber-line); color: var(--text); }
+          .m-task-detail-note:focus { border-color: var(--amber); color: var(--text); }
           .m-task-detail-note::placeholder { color: var(--text-faint); }
-          .m-task-detail-options { margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 0 14px; }
-          .m-option-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+          .m-task-detail-options { margin-top: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+          .m-option-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; min-height: 56px; border-bottom: 1px solid var(--border); }
           .m-option-row:last-child { border-bottom: none; }
-          .m-option-label { font-size: 15px; color: var(--text-dim); }
+          .m-option-label { font-size: 15px; color: var(--text); font-weight: 600; }
           .m-option-select {
-            background: var(--surface-2); border: none; border-radius: 10px;
-            color: var(--text); font-size: 15px; padding: 9px 12px; max-width: 60%; font-family: inherit;
+            background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text); font-size: 14.5px; padding: 8px 10px; max-width: 60%; font-family: inherit;
           }
-          .m-task-detail .datefield-btn { font-size: 15px; padding: 9px 13px; background: var(--surface-2); border-radius: 10px; }
-          .m-task-detail .pill { font-size: 14px; padding: 8px 13px; }
-          .m-task-detail .badge { font-size: 14px; padding: 8px 13px; border-radius: 10px; }
+          .m-task-detail .datefield-btn { font-size: 15px; padding: 8px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; }
+          .m-task-detail .pill { font-size: 14px; padding: 7px 12px; }
+          .m-task-detail .badge { font-size: 14px; padding: 7px 12px; border-radius: 8px; }
 
-          /* quick add */
+          /* ---- quick add ---- */
           .m-quickadd-area-select {
-            flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-            color: var(--text); font-size: 14.5px; font-weight: 650; padding: 10px 12px; font-family: inherit;
+            flex: 1; min-width: 0; height: 40px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
+            color: var(--text); font-size: 15px; font-weight: 700; padding: 0 10px; font-family: inherit;
           }
-          .m-quickadd-item { display: flex; align-items: center; gap: 12px; padding: 13px 6px; font-size: 15px; color: var(--text-dim); border-bottom: 1px solid var(--border); }
-          .m-quickadd-input-row { display: flex; gap: 8px; padding: 12px; flex-shrink: 0; }
+          .m-quickadd-input-row { display: flex; gap: 8px; padding: 18px 12px 12px; flex-shrink: 0; }
           .m-quickadd-input-row input {
-            flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--amber-line); border-radius: 14px;
-            padding: 14px 15px; color: var(--text); font-size: 16px; outline: none; font-family: inherit;
+            flex: 1; min-width: 0; height: 44px; background: var(--surface-2); border: 1px solid var(--amber); border-radius: 9px;
+            padding: 0 12px; color: var(--text); font-size: 15.5px; outline: none; font-family: inherit;
           }
-          .m-quickadd-send { width: 52px; flex-shrink: 0; border-radius: 14px; border: none; background: var(--amber); color: #1b1304; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px -6px rgba(242,171,67,0.55); }
+          .m-quickadd-send { width: 44px; flex-shrink: 0; border-radius: 9px; border: none; background: var(--amber); color: #1a1200; display: flex; align-items: center; justify-content: center; }
+          .m-quickadd-input-row + .m-list { padding-top: 0; }
+          .m-quickadd-item { display: flex; align-items: center; gap: 10px; padding: 14px; font-size: 15px; color: var(--text-dim); border-bottom: 1px solid var(--border); flex-shrink: 0; }
 
-          .toast { bottom: calc(86px + env(safe-area-inset-bottom)); }
+          .toast { bottom: calc(120px + env(safe-area-inset-bottom)); }
         }
       `}</style>
 
