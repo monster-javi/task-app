@@ -1,92 +1,50 @@
-# Task App — versión web
+# ✅ Task App
 
-Versión web del task tracker, con login y conectada en vivo a Supabase
-(proyecto `task-app`). Cada usuario tiene sus propias áreas, proyectos y
-tareas — separadas del resto — con actualizaciones en tiempo real entre
-pestañas/dispositivos de una misma cuenta.
+Organizador de tareas por áreas y proyectos, con calendario, prioridades y sincronización en la nube. Simple, oscuro y rápido.
 
-## Cómo publicarla en GitHub Pages
+**👉 Usala acá: [monster-javi.github.io/task-app](https://monster-javi.github.io/task-app/)**
 
-1. Subí esta carpeta entera a un repositorio de GitHub (público o privado).
-2. En el repo, andá a **Settings → Pages** y en "Build and deployment" elegí
-   **Source: GitHub Actions**.
-3. Hacé `git push` a la rama `main`. El workflow en
-   `.github/workflows/deploy.yml` compila y publica solo — no hace falta
-   compilar nada a mano.
-4. A los pocos minutos la app va a estar viva en la URL que te asigna GitHub
-   Pages (aparece en Settings → Pages una vez que termina el primer deploy).
+---
 
-## Login — qué falta activar del lado de Supabase
+## Qué hace
 
-El login por **email** ya funciona de fábrica, sin nada que configurar.
+- **Áreas y proyectos**: separá trabajo, casa, estudio… y adentro, cada proyecto con sus tareas.
+- **Tres vistas**:
+  - **Lista**: todo agrupado por área y proyecto.
+  - **Por prioridad**: alta, media y baja.
+  - **Calendario**: con los feriados de tu país.
+- **Estados**: por hacer, haciendo y hecho. Fechas de vencimiento, avisos de lo vencido y de lo que vence mañana, y favoritas.
+- **Carga rápida**: escribí varias tareas de una en texto libre y se reparten solas.
+- **Arrastrar y soltar** para reordenar.
+- **Notas** por tarea.
+- **Notificaciones** de vencimientos.
+- **Sincronización en tiempo real** entre pestañas y dispositivos de la misma cuenta.
+- Funciona en el celular.
 
-### "Probar sin cuenta" (modo invitado)
+## Privacidad
 
-1. En el [dashboard de Supabase](https://supabase.com/dashboard/project/ezbhodcepwpoxehlaejp),
-   andá a **Authentication → Sign In / Providers**.
-2. Buscá **Anonymous Sign-Ins** y activalo.
+- Login con email, o **"Probar sin cuenta"** (modo invitado, atado a ese navegador).
+- Cada usuario ve solo sus datos: Supabase los protege con Row Level Security.
+- **Cifrado de extremo a extremo opcional** (AES-256-GCM, clave derivada con PBKDF2) desde el candado de la barra superior:
+  - Supabase solo guarda bytes cifrados.
+  - La contraseña de cifrado es distinta de la del login y nunca sale de tu navegador.
+  - Si la perdés, no hay forma de recuperar los datos.
+- La `anon key` de Supabase que aparece en el código es pública por diseño: lo que protege los datos es RLS.
 
-Sin este paso, el botón "Probar sin cuenta" va a mostrar un error pidiendo
-justamente que lo actives.
+## Desarrollo
 
-### Login con Google
-
-Por ahora no está — el trámite de Google exige "verificar" la app o, mientras
-no la verificás, muestra un cartel de "app no verificada" a cada usuario que
-intenta entrar, lo cual espanta a cualquiera que no sepa que es esperable.
-Si en algún momento se vuelve una prioridad (por ejemplo, si el número de
-usuarios crece y vale la pena pasar por la verificación de Google), es
-cuestión de retomarlo — el resto de la infraestructura de login ya está lista
-para sumarlo.
-
-## Desarrollo local
-
-```
+```bash
 npm install
-npm run dev
+npm run dev      # servidor local
+npm run build    # compila a dist/
 ```
 
-## Sobre los datos
+Cada push a `main` compila y publica sola en GitHub Pages con el workflow `.github/workflows/deploy.yml` (Settings → Pages → Source: **GitHub Actions**).
 
-- Cada usuario (con cuenta o invitado) tiene su propia fila en la tabla,
-  protegida por Row Level Security — nadie puede ver ni tocar los datos de
-  otro usuario.
-- Un usuario invitado (modo "Probar sin cuenta") queda atado a ese navegador
-  puntual — si borra los datos del navegador o entra desde otro dispositivo,
-  no va a ver la misma sesión. Si en algún momento se quiere poder "pasar"
-  esos datos a una cuenta con email, Supabase soporta convertir una sesión
-  anónima en una cuenta real (`linkIdentity`) — es un paso aparte, avisame si
-  lo necesitás.
-- Las credenciales de Supabase (URL + `anon key`) están directamente en el
-  código (`src/App.jsx`). Es intencional: la `anon key` está pensada para ser
-  pública — lo que protege los datos es Row Level Security, no ocultar la key.
-- **Cifrado de extremo a extremo (zero-knowledge), opcional**: apagado por
-  defecto — entrás y usás la app normal, sin fricción. Se activa a mano desde
-  el ícono de candado en la topbar, y ahí sí, todo lo que subís a Supabase de
-  ahí en más (AES-256-GCM, clave derivada con PBKDF2 vía Web Crypto API) sale
-  cifrado de tu navegador — Supabase solo recibe y guarda bytes cifrados.
-- La contraseña de cifrado es **distinta** de la contraseña de login, y nunca
-  se envía a ningún servidor — vive únicamente en la memoria de tu navegador
-  mientras usás la app. Se pide una vez por sesión (al cerrar la pestaña o
-  recargar, hay que volver a ingresarla) si ya estaba activado antes.
-- Se puede desactivar en cualquier momento desde el mismo ícono — pide la
-  contraseña de cifrado actual como confirmación (la verifica contra lo
-  guardado, no solo contra lo que hay en memoria) antes de volver todo a
-  texto plano.
-- **Si la olvidás, no hay forma de recuperar los datos.** No existe un
-  "restablecer contraseña" para esto — es la contrapartida inevitable de que
-  ni siquiera nosotros podamos leerlos.
-- Consecuencia directa de este diseño: como Supabase nunca ve el contenido
-  real, **el conector de Supabase de Claude no puede leer ni escribir tareas
-  en esta versión** — solo vería bytes cifrados. Si en algún momento se
-  prioriza esa integración por sobre el cifrado, es una decisión de diseño
-  aparte, no algo que se pueda tener ambas cosas a la vez sobre los mismos
-  datos.
+### Supabase
 
-## Estructura de la tabla en Supabase
-
-Ya está creada y migrada a "una fila por usuario" en el proyecto `task-app`,
-documentada acá por si alguna vez hace falta recrearla:
+- **Modo invitado:** necesita **Anonymous Sign-Ins** activado en *Authentication → Sign In / Providers*.
+- **Tabla:** una fila por usuario.
 
 ```sql
 create table if not exists app_data (
@@ -102,3 +60,18 @@ on app_data for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 ```
+
+## Cómo está hecha
+
+- **React + Vite**
+- **Supabase**: auth, base de datos y realtime
+- **Web Crypto API**: cifrado
+- **lucide-react**: íconos
+
+Hermana de [Gastos App](https://github.com/monster-javi/gastos-app): comparten el diseño y la idea.
+
+---
+
+Si te sirve y querés bancar el proyecto, ¡invitame un cafecito! ☕
+
+[![Invitame un café en cafecito.app](https://cdn.cafecito.app/imgs/buttons/button_2.svg)](https://cafecito.app/monsterjavi)  [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/R6R51FQ52H)
