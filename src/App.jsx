@@ -452,7 +452,7 @@ const BOOT_STYLES = `
   .boot-screen button, .boot-screen input { font-family: inherit; }
   .auth-card { width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 32px 30px 28px; box-shadow: 0 30px 80px -20px rgba(0,0,0,0.7); }
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 17.5px; color: var(--text); margin-bottom: 20px; }
-  .brand-dot { width: 9px; height: 9px; border-radius: 3px; background: var(--amber); box-shadow: 0 0 0 3px rgba(242,171,67,0.16); transform: rotate(45deg); }
+  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(242,171,67,0.15); }
 
   .auth-divider { display: flex; align-items: center; gap: 10px; margin: 18px 0; color: var(--text-faint); font-size: 11.5px; }
   .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
@@ -833,6 +833,7 @@ export default function TaskApp() {
   const [mobileEventEdit, setMobileEventEdit] = useState(null);
   const [mobileNoteEdit, setMobileNoteEdit] = useState(null);
   const [draggingToNotes, setDraggingToNotes] = useState(false);
+  const [notePick, setNotePick] = useState(null); // { id, x, y } — "convertir en tarea" menu
 
   const noteInputRef = useRef(null);
   const newAreaInputRef = useRef(null);
@@ -3549,11 +3550,22 @@ export default function TaskApp() {
     showToast("Guardada en Notas");
   }
 
-  function noteToTask(noteId) {
-    const n = notes.find((x) => x.id === noteId);
-    if (!n) return;
-    const areaId = n.areaId && areaMap[n.areaId] ? n.areaId : ensureArea("General");
-    const projectId = n.projectId && areaMap[areaId]?.projects?.some((p) => p.id === n.projectId) ? n.projectId : null;
+  // Notes are general (not tied to an area). A note that came from a task
+  // remembers where it lived, so it can go back there — or to any other area.
+  function noteOrigin(n) {
+    const a = n.areaId ? areaMap[n.areaId] : null;
+    if (!a) return null;
+    const p = n.projectId ? a.projects?.find((x) => x.id === n.projectId) : null;
+    return { areaId: a.id, projectId: p ? p.id : null, label: [a.name, p?.name].filter(Boolean).join(" / ") };
+  }
+
+  function noteToTask(noteId, destAreaId, destProjectId, override) {
+    const found = notes.find((x) => x.id === noteId);
+    if (!found) return;
+    const n = override ? { ...found, ...override } : found;
+    const origin = noteOrigin(n);
+    const areaId = destAreaId && areaMap[destAreaId] ? destAreaId : origin ? origin.areaId : ensureArea("General");
+    const projectId = destAreaId ? (destProjectId || null) : origin ? origin.projectId : null;
     const task = {
       id: uid(), areaId, projectId, title: (n.title || "").trim() || (n.body || "").split("\n")[0].slice(0, 120) || "Nota",
       note: (n.body || "").replace(/\s*\n\s*/g, " · ").trim(), status: "Por hacer",
@@ -3562,15 +3574,13 @@ export default function TaskApp() {
     setTasks((prev) => reassignGroupOrder([...prev, task], areaId, projectId));
     setNotes((prev) => prev.filter((x) => x.id !== noteId));
     setMobileNoteEdit(null);
-    showToast("Volvió a tareas");
+    setNotePick(null);
+    const dest = [areaMap[areaId]?.name, projectId ? areaMap[areaId]?.projects?.find((p) => p.id === projectId)?.name : null].filter(Boolean).join(" / ");
+    showToast(`Ahora es una tarea en ${dest || "General"}`);
   }
 
   function createNote({ title = "", body = "" } = {}) {
-    const note = {
-      id: uid(), title, body, createdAt: Date.now(),
-      areaId: selectedAreaId !== "all" ? selectedAreaId : null,
-      projectId: selectedAreaId !== "all" ? selectedProjectId || null : null,
-    };
+    const note = { id: uid(), title, body, createdAt: Date.now() };
     setNotes((prev) => [note, ...prev]);
     return note;
   }
@@ -3588,10 +3598,9 @@ export default function TaskApp() {
   const visibleNotes = useMemo(() => {
     const q = search.trim().toLowerCase();
     return notes
-      .filter((n) => selectedAreaId === "all" || n.areaId === selectedAreaId)
       .filter((n) => !q || (n.title || "").toLowerCase().includes(q) || (n.body || "").toLowerCase().includes(q))
       .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
-  }, [notes, search, selectedAreaId]);
+  }, [notes, search]);
 
   const taskDragActive = !!(draggedTaskId || calDragTaskId);
   function notesDropProps() {
@@ -3620,33 +3629,69 @@ export default function TaskApp() {
     el.style.height = el.scrollHeight + "px";
   }
 
+  function renderNotePickMenu() {
+    if (!notePick) return null;
+    const n = notes.find((x) => x.id === notePick.id);
+    if (!n) return null;
+    const origin = noteOrigin(n);
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const w = 240;
+    const left = Math.min(Math.max(8, notePick.x - w + 40), vw - w - 8);
+    const style = notePick.y + 320 < vh ? { left, top: notePick.y + 6, width: w } : { left, bottom: vh - notePick.top + 6, width: w };
+    return createPortal(
+      <>
+        <div className="cal-pop-scrim" onClick={() => setNotePick(null)} />
+        <div className="cal-pop note-pick" style={style} onClick={(e) => e.stopPropagation()}>
+          <div className="note-pick-title">Convertir en tarea en…</div>
+          {origin && (
+            <button className="note-pick-item note-pick-item--origin" onClick={() => noteToTask(n.id, origin.areaId, origin.projectId)}>
+              <Undo2 size={13} /> Donde estaba: {origin.label}
+            </button>
+          )}
+          <div className="note-pick-list">
+            {orderedAreas.map((a) => (
+              <React.Fragment key={a.id}>
+                <button className="note-pick-item" onClick={() => noteToTask(n.id, a.id, null)}>
+                  <span className="note-pick-dot" style={{ background: a.color }} />{a.name}
+                </button>
+                {(a.projects || []).map((p) => (
+                  <button key={p.id} className="note-pick-item note-pick-item--project" onClick={() => noteToTask(n.id, a.id, p.id)}>{p.name}</button>
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </>,
+      document.body
+    );
+  }
+
   function renderNotesView() {
     return (
       <div className={`notes-wrap ${draggingToNotes ? "notes-wrap--drop" : ""}`} {...notesDropProps()}>
         <div className="notes-new">
-          <StickyNote size={16} />
+          <Plus size={15} />
           <input
-            placeholder="Escribí una nota y apretá Enter"
+            placeholder="Nueva nota"
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.currentTarget.value.trim()) {
                 createNote({ title: e.currentTarget.value.trim() });
                 e.currentTarget.value = "";
-                showToast("Nota creada");
               }
             }}
           />
+          <span className="notes-new-hint">Enter para crear · arrastrá una tarea a Notas para guardarla acá</span>
         </div>
-        <div className="notes-hint">Para guardar una tarea como nota, arrastrala hasta <b>Notas</b> en la barra lateral. Sale de la lista de tareas y queda acá.</div>
         {visibleNotes.length === 0 ? (
           <div className="notes-empty">
-            {search.trim() ? `Ninguna nota coincide con "${search.trim()}".` : "Todavía no hay notas. Escribí una arriba o arrastrá una tarea hasta Notas."}
+            {search.trim() ? `Ninguna nota coincide con "${search.trim()}".` : "Todavía no hay notas."}
           </div>
         ) : (
           <div className="notes-grid">
             {visibleNotes.map((n) => {
-              const { area, label } = notePlace(n);
+              const origin = noteOrigin(n);
               return (
-                <div key={n.id} className="note-card" style={{ "--chip": area?.color || "var(--border-strong)" }}>
+                <div key={n.id} className="note-card">
                   <input
                     className="note-title"
                     defaultValue={n.title}
@@ -3660,23 +3705,31 @@ export default function TaskApp() {
                     defaultValue={n.body}
                     key={n.id + ":b:" + (n.updatedAt || 0)}
                     placeholder="Escribí algo…"
-                    rows={2}
+                    rows={1}
                     ref={autoGrow}
                     onInput={(e) => autoGrow(e.target)}
                     onBlur={(e) => { if (e.target.value !== (n.body || "")) updateNote(n.id, { body: e.target.value }); }}
                   />
                   <div className="note-foot">
-                    {label && <span className="note-place"><span className="note-place-dot" />{label}</span>}
-                    <span className="note-date">{n.fromTask ? "Era una tarea · " : ""}{relTimeLabel(n.updatedAt || n.createdAt)}</span>
-                    <span style={{ flex: 1 }} />
-                    <button className="note-act" onClick={() => noteToTask(n.id)} title="Volver a convertirla en tarea"><Undo2 size={13} /> A tareas</button>
-                    <button className="note-act note-act--danger" onClick={() => deleteNote(n.id)} title="Eliminar nota"><Trash2 size={13} /></button>
+                    <span className="note-date">
+                      {relTimeLabel(n.updatedAt || n.createdAt)}
+                      {origin ? ` · de ${origin.label}` : ""}
+                    </span>
+                    <span className="note-actions">
+                      <button
+                        className="note-act"
+                        onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setNotePick({ id: n.id, x: r.right, y: r.bottom, top: r.top }); }}
+                        title="Convertir en tarea (volver a donde estaba o elegir un área)"
+                      ><Undo2 size={13} /> A tareas</button>
+                      <button className="note-act note-act--danger" onClick={() => deleteNote(n.id)} title="Eliminar nota"><Trash2 size={13} /></button>
+                    </span>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
+        {renderNotePickMenu()}
       </div>
     );
   }
@@ -3773,19 +3826,20 @@ export default function TaskApp() {
           {list.length === 0 && (
             <div className="m-empty-hint">{q ? `Sin resultados para "${mobileSearch}"` : "Todavía no hay notas. Tocá + para crear una, o deslizá una tarea hacia la izquierda y tocá Notas."}</div>
           )}
-          {list.map((n) => {
-            const { area, label } = notePlace(n);
-            return (
-              <button key={n.id} className="m-note-card" style={{ "--chip": area?.color || "var(--border-strong)" }} onClick={() => setMobileNoteEdit({ ...n })}>
-                <span className="m-note-title">{n.title || "Sin título"}</span>
-                {n.body && <span className="m-note-body">{n.body}</span>}
-                <span className="m-note-meta">
-                  {label && <><span className="note-place-dot" />{label} · </>}
-                  {n.fromTask ? "Era una tarea · " : ""}{relTimeLabel(n.updatedAt || n.createdAt)}
-                </span>
-              </button>
-            );
-          })}
+          {list.length > 0 && (
+            <div className="m-card m-notes-card">
+              {list.map((n) => {
+                const origin = noteOrigin(n);
+                return (
+                  <button key={n.id} className="m-note-row" onClick={() => setMobileNoteEdit({ ...n, dest: origin ? "origin" : "" })}>
+                    <span className="m-note-title">{n.title || "Sin título"}</span>
+                    {n.body && <span className="m-note-body">{n.body}</span>}
+                    <span className="m-note-meta">{relTimeLabel(n.updatedAt || n.createdAt)}{origin ? ` · de ${origin.label}` : ""}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
         {renderMobileUrgentBar()}
       </div>
@@ -3892,9 +3946,38 @@ export default function TaskApp() {
           <div className="modal-card m-sheet" onClick={(e) => e.stopPropagation()}>
             <input className="m-sheet-note-title" placeholder="Título" value={ed.title} onChange={(e) => set({ title: e.target.value })} autoFocus={!ed.id} />
             <textarea className="settings-input m-sheet-input m-sheet-note-body" rows={6} placeholder="Escribí algo…" value={ed.body} onChange={(e) => set({ body: e.target.value })} />
+            {ed.id && (() => {
+              const n = notes.find((x) => x.id === ed.id);
+              const origin = n ? noteOrigin(n) : null;
+              return (
+                <div className="m-note-convert">
+                  <span className="m-note-convert-label">Convertir en tarea en</span>
+                  <div className="m-note-convert-row">
+                    <select className="m-option-select m-note-convert-select" value={ed.dest || ""} onChange={(e) => set({ dest: e.target.value })}>
+                      <option value="" disabled>Elegí un área…</option>
+                      {origin && <option value="origin">Donde estaba: {origin.label}</option>}
+                      {orderedAreas.map((a) => (
+                        <React.Fragment key={a.id}>
+                          <option value={a.id + "|"}>{a.name}</option>
+                          {(a.projects || []).map((p) => <option key={p.id} value={a.id + "|" + p.id}>&nbsp;&nbsp;{a.name} / {p.name}</option>)}
+                        </React.Fragment>
+                      ))}
+                    </select>
+                    <button
+                      className="modal-btn modal-btn--cancel"
+                      disabled={!ed.dest}
+                      onClick={() => {
+                        const override = { title: (ed.title || "").trim(), body: ed.body || "" };
+                        if (ed.dest === "origin") noteToTask(ed.id, origin.areaId, origin.projectId, override);
+                        else { const [aId, pId] = ed.dest.split("|"); noteToTask(ed.id, aId, pId || null, override); }
+                      }}
+                    ><Undo2 size={14} /> Convertir</button>
+                  </div>
+                </div>
+              );
+            })()}
             <div className="modal-actions">
               {ed.id && <button className="modal-btn modal-btn--cancel m-sheet-danger" onClick={() => deleteNote(ed.id)}><Trash2 size={14} /></button>}
-              {ed.id && <button className="modal-btn modal-btn--cancel" onClick={() => noteToTask(ed.id)}><Undo2 size={14} /> A tareas</button>}
               <span style={{ flex: 1 }} />
               <button className="modal-btn modal-btn--primary" onClick={saveMobileNote}>Listo</button>
             </div>
@@ -4678,6 +4761,8 @@ export default function TaskApp() {
           min-height: 640px;
           overflow: hidden;
           text-align: left;
+          border: 1px solid var(--border);
+          border-radius: 12px;
         }
         .tt-root button, .tt-root input, .tt-root select, .tt-root textarea { font-family: inherit; }
         .tt-root :focus-visible { outline: 2px solid var(--amber-line); outline-offset: 1px; }
@@ -4701,27 +4786,31 @@ export default function TaskApp() {
           padding: 18px 12px 12px;
           overflow-y: auto;
         }
-        .brand { display: flex; align-items: center; gap: 8px; padding: 4px 6px 20px; font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
-        .brand-dot { width: 9px; height: 9px; border-radius: 3px; background: var(--amber); box-shadow: 0 0 0 3px rgba(242,171,67,0.16); transform: rotate(45deg); }
-        .side-label { font-size: 12.5px; color: var(--text-faint); font-weight: 600; letter-spacing: 0.06em; padding: 0 6px; margin: 14px 0 6px; }
-        .side-label-row { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 6px; padding: 0 2px 0 6px; }
+        /* marca y menú: mismas medidas que Gastos App v152 */
+        .brand { display: flex; align-items: center; gap: 8px; padding: 4px 8px 18px; font-weight: 600; font-size: 17px; letter-spacing: -0.01em; line-height: 22px; }
+        .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(242,171,67,0.15); flex-shrink: 0; }
+        .side-label { font-size: 11px; color: #4f5661; font-weight: 600; letter-spacing: 0.06em; padding: 0 10px; margin: 10px 0 6px; line-height: 14px; }
+        .side-label-row { display: flex; align-items: center; justify-content: space-between; margin: 10px 0 6px; padding: 0 2px 0 10px; }
+        .side-divider { height: 1px; background: var(--border); margin: 10px; flex-shrink: 0; }
         .side-label-row .side-label { margin: 0; padding: 0; }
         .side-label-action { background: none; border: none; color: var(--text-faint); cursor: pointer; padding: 3px; border-radius: 5px; display: flex; }
         .side-label-action:hover { color: var(--text-dim); background: var(--surface-2); }
         .fav-star-btn { background: none; border: none; padding: 2px; color: var(--text-faint); display: flex; flex-shrink: 0; }
         .fav-star-btn--active { color: var(--amber); }
         .side-item {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 7px 9px; border-radius: 8px; font-size: 14px; color: var(--text-dim);
+          position: relative; display: flex; align-items: center; justify-content: space-between;
+          height: 34px; flex-shrink: 0; padding: 0 10px; border-radius: 8px; font-size: 14px; color: var(--text-dim);
           cursor: pointer; margin-bottom: 2px; transition: background .12s, color .12s;
           user-select: none;
         }
+        .side-item-left > svg { opacity: 0.7; flex-shrink: 0; transition: color .12s, opacity .12s; }
+        .side-item--active::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--amber); box-shadow: 0 0 10px rgba(242,171,67,0.6); }
         .side-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
-        .side-item--active { background: var(--surface-2); color: var(--text); font-weight: 500; }
-        .side-item--active .side-item-left > svg { color: var(--amber); }
+        .side-item--active { background: var(--surface-2); color: var(--text); font-weight: 550; }
+        .side-item--active .side-item-left > svg { color: var(--amber); opacity: 1; }
         .side-item--disabled { cursor: default; opacity: 0.45; }
         .side-item--disabled:hover { background: none; color: var(--text-dim); }
-        .side-item-left { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
+        .side-item-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
         .side-item-right { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
         .side-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; }
         .side-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; border: none; padding: 0; cursor: pointer; }
@@ -5372,41 +5461,51 @@ export default function TaskApp() {
         .notes-wrap, .events-wrap { flex: 1; overflow-y: auto; width: calc(100% - 40px); max-width: 1320px; margin: 0 auto; padding: 18px 0 30px; border-radius: var(--radius-lg); transition: box-shadow .12s, background .12s; }
         .notes-wrap--drop { box-shadow: inset 0 0 0 2px var(--amber); background: rgba(242,171,67,0.04); }
         .notes-new {
-          display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 48px; margin-bottom: 10px;
-          background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); color: var(--text-faint);
+          display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 42px; margin-bottom: 16px;
+          background: var(--surface); border: 1px solid var(--border); border-radius: 10px; color: var(--text-faint);
         }
         .notes-new:focus-within { border-color: var(--amber-line); }
-        .notes-new input { flex: 1; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 14.5px; }
+        .notes-new input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 14px; }
         .notes-new input::placeholder { color: var(--text-faint); }
-        .notes-hint { font-size: 12.5px; color: var(--text-faint); margin: 0 4px 18px; }
-        .notes-hint b { color: var(--text-dim); font-weight: 600; }
+        .notes-new-hint { font-size: 12px; color: var(--text-faint); white-space: nowrap; }
         .notes-empty { padding: 50px 20px; text-align: center; color: var(--text-faint); font-size: 14px; }
-        .notes-grid { columns: 3 300px; column-gap: 14px; }
+        .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; align-items: start; }
         .note-card {
-          break-inside: avoid; margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px;
-          background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px 10px;
-          box-shadow: inset 3px 0 0 var(--chip);
+          display: flex; flex-direction: column; gap: 2px; min-width: 0;
+          background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px 6px;
+          transition: border-color .12s;
         }
-        .note-card:focus-within { border-color: var(--border-strong); }
-        .note-title { background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 15px; font-weight: 650; padding: 0; width: 100%; }
+        .note-card:hover, .note-card:focus-within { border-color: var(--border-strong); }
+        .note-title { background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 14px; font-weight: 600; padding: 0; width: 100%; }
         .note-title::placeholder { color: var(--text-faint); }
         .note-body {
           background: none; border: none; outline: none; resize: none; overflow: hidden; color: var(--text-dim);
-          font: inherit; font-size: 13.5px; line-height: 1.5; padding: 0; width: 100%; min-height: 22px;
+          font: inherit; font-size: 13px; line-height: 1.45; padding: 0; width: 100%; min-height: 19px; max-height: 8.7em;
         }
-        .note-body:focus { color: var(--text); }
-        .note-body::placeholder { color: var(--text-faint); }
-        .note-foot { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--border); min-width: 0; }
-        .note-place { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-dim); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .note-place-dot { flex-shrink: 0; }
-        .note-place-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--chip); }
-        .note-date { font-size: 11.5px; color: var(--text-faint); white-space: nowrap; flex-shrink: 0; }
+        .note-body:focus { color: var(--text); max-height: none; }
+        .note-body::placeholder { color: var(--text-faint); opacity: 0.6; }
+        .note-foot { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 26px; }
+        .note-date { flex: 1; min-width: 0; font-size: 11.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .note-actions { display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity .12s; flex-shrink: 0; }
+        .note-card:hover .note-actions, .note-card:focus-within .note-actions { opacity: 1; }
+        @media (hover: none) { .note-actions { opacity: 1; } }
         .note-act {
           display: inline-flex; align-items: center; gap: 5px; border: none; background: none; color: var(--text-faint);
-          font: inherit; font-size: 12px; padding: 5px 7px; border-radius: 7px; cursor: pointer; flex-shrink: 0;
+          font: inherit; font-size: 12px; padding: 4px 6px; border-radius: 6px; cursor: pointer; flex-shrink: 0;
         }
         .note-act:hover { background: var(--surface-2); color: var(--text); }
         .note-act--danger:hover { color: var(--alta); background: rgba(242,95,85,0.12); }
+        .note-pick { padding: 8px; }
+        .note-pick-title { font-size: 11.5px; font-weight: 600; color: var(--text-faint); padding: 4px 8px 6px; }
+        .note-pick-list { max-height: 260px; overflow-y: auto; }
+        .note-pick-item {
+          display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: none; background: none; cursor: pointer;
+          color: var(--text); font: inherit; font-size: 13px; padding: 7px 8px; border-radius: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .note-pick-item:hover { background: var(--surface-3); }
+        .note-pick-item--origin { color: var(--amber); margin-bottom: 4px; border-bottom: 1px solid var(--border); border-radius: 7px 7px 0 0; padding-bottom: 9px; }
+        .note-pick-item--project { padding-left: 24px; color: var(--text-dim); font-size: 12.5px; }
+        .note-pick-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
         /* ---- eventos (vista) ---- */
         .events-head { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
@@ -5416,12 +5515,12 @@ export default function TaskApp() {
         .events-section-title span { font-size: 11.5px; color: var(--text-faint); background: var(--surface-2); padding: 1px 8px; border-radius: 999px; }
         .event-card {
           display: flex; align-items: center; gap: 8px; padding-right: 10px; margin-bottom: 8px; overflow: hidden;
-          background: linear-gradient(90deg, color-mix(in srgb, var(--ev) 12%, transparent), transparent 50%), var(--surface);
+          background: var(--surface);
           border: 1px solid var(--border); border-radius: var(--radius-lg);
         }
         .event-card--past { opacity: 0.6; }
         .event-card-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; background: none; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer; padding: 0; }
-        .event-card-bar { width: 4px; align-self: stretch; background: var(--ev); flex-shrink: 0; box-shadow: 0 0 12px -2px var(--ev); }
+        .event-card-bar { width: 3px; align-self: stretch; background: var(--ev); flex-shrink: 0; }
         .event-card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding: 13px 0; }
         .event-card-title { font-size: 15px; font-weight: 650; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .event-card-span { font-size: 12.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -5477,7 +5576,7 @@ export default function TaskApp() {
            3px colored left edge, 14px rows, session bar + alert bar pinned at
            the bottom, centered modals. Task keeps its amber accent. */
         @media (max-width: 820px) {
-          .tt-root { border-radius: 0; min-height: 100vh; min-height: 100dvh; height: 100dvh; font-size: 13px; }
+          .tt-root { min-height: 100vh; min-height: 100dvh; height: 100dvh; font-size: 13px; }
           .tt-root, .tt-root * { touch-action: manipulation; }
 
           /* ---- modals: centered cards, like Gastos ---- */
@@ -5751,19 +5850,24 @@ export default function TaskApp() {
           .m-detail-action span { flex-basis: 100%; padding-left: 27px; font-size: 12.5px; font-weight: 400; color: var(--text-faint); }
           .m-special-row { display: flex; gap: 10px; margin-bottom: 12px; flex-shrink: 0; }
           .m-special-card {
-            flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 12px 12px 12px 14px; color: var(--chip);
-            background: linear-gradient(90deg, color-mix(in srgb, var(--chip) 12%, transparent), transparent 70%), var(--surface);
-            border: 1px solid var(--border); border-left: 3px solid var(--chip); border-radius: 12px;
+            flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 12px 12px 12px 14px; color: var(--text-dim);
+            background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
           }
           .m-special-name { flex: 1; text-align: left; font-size: 15px; font-weight: 700; color: var(--text); }
-          .m-note-card {
-            width: 100%; flex-shrink: 0; display: flex; flex-direction: column; gap: 5px; text-align: left; margin-bottom: 10px;
-            padding: 13px 14px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--chip); border-radius: 12px; color: var(--text);
+          .m-notes-card { padding: 0; }
+          .m-note-row {
+            width: 100%; display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 12px 14px;
+            background: none; border: none; border-bottom: 1px solid var(--border); color: var(--text);
           }
-          .m-note-title { font-size: 15.5px; font-weight: 650; }
-          .m-note-body { font-size: 14px; color: var(--text-dim); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
-          .m-note-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-faint); }
-          .m-note-meta .note-place-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--chip); }
+          .m-notes-card > .m-note-row:last-child { border-bottom: none; }
+          .m-note-title { font-size: 15px; font-weight: 600; }
+          .m-note-body { font-size: 13.5px; color: var(--text-dim); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+          .m-note-meta { font-size: 11.5px; color: var(--text-faint); }
+          .m-note-convert { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+          .m-note-convert-label { font-size: 12.5px; color: var(--text-faint); }
+          .m-note-convert-row { display: flex; gap: 8px; }
+          .m-note-convert-select { flex: 1; max-width: none; min-width: 0; }
+          .m-note-convert-row .modal-btn:disabled { opacity: 0.45; }
           .m-event-row {
             width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 0; text-align: left;
             background: none; border: none; border-bottom: 1px solid var(--border); color: var(--text);
@@ -5817,6 +5921,7 @@ export default function TaskApp() {
         <div className={`side-item ${view === "calendario" ? "side-item--active" : ""}`} onClick={() => setView("calendario")}>
           <span className="side-item-left"><CalendarIcon size={14} /> Calendario</span>
         </div>
+        <div className="side-divider" />
         <div className={`side-item ${view === "eventos" ? "side-item--active" : ""}`} onClick={() => setView("eventos")}>
           <span className="side-item-left"><CalendarRange size={14} /> Eventos</span>
           {eventGroups().now.length + eventGroups().next.length > 0 && <span className="side-count mono">{eventGroups().now.length + eventGroups().next.length}</span>}
@@ -5831,6 +5936,7 @@ export default function TaskApp() {
           {taskDragActive ? <span className="side-drop-hint">Soltá acá</span> : notes.length > 0 && <span className="side-count mono">{notes.length}</span>}
         </div>
 
+        <div className="side-divider" />
         <div className="side-label-row">
           <span className="side-label">ÁREAS</span>
         </div>
