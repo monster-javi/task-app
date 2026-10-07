@@ -5,7 +5,7 @@ import {
   Search, Bell, ChevronDown, ChevronRight, ChevronLeft,
   Trash2, Loader2, Plus, Circle, CircleDot, CheckCircle2, Pencil, ListChecks,
   List as ListIcon, Flag, Calendar as CalendarIcon, ChevronsDown, ChevronsUp, X,
-  RefreshCw, Cloud, CloudOff, Download, Upload, Settings, Lock, Unlock, Info, GripVertical, EyeOff, Star, Inbox, CalendarX, ArrowRight,
+  RefreshCw, Cloud, CloudOff, Download, Upload, Settings, Lock, Unlock, Info, GripVertical, EyeOff, Star, Inbox, CalendarX, ArrowRight, StickyNote, CalendarRange, Undo2,
 } from "lucide-react";
 
 // ---------- Supabase ----------
@@ -72,6 +72,7 @@ async function decryptPayload(key, envelope) {
 const PALETTE = ["#4C8DFF", "#34D399", "#A78BFA", "#FB923C", "#F0554B", "#2DD4BF", "#F5C451", "#F472B6", "#60A5FA", "#84CC16"];
 
 const PRIORITIES = ["Baja", "Media", "Alta"];
+const EVENT_COLORS = ["#A78BFA", "#4C8DFF", "#2DD4BF", "#34D399", "#F2AB43", "#FB923C", "#F25F55", "#F472B6"];
 const STATUSES = ["Por hacer", "Haciendo", "Hecho"];
 
 const STATUS_ICON = {
@@ -780,7 +781,15 @@ export default function TaskApp() {
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [dragOverKey, setDragOverKey] = useState(null);
   const [urgentIndex, setUrgentIndex] = useState(0);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [urgentPaused, setUrgentPaused] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => loadLocalPrefs().notificationsEnabled !== false);
+  // Eventos (multi-día, como Google Calendar) y Notas: cada uno es su propia
+  // fila en task_kv ("event:<id>" / "note:<id>"), igual que las tareas.
+  const [events, setEvents] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const eventsRef = useRef([]);
+  const notesRef = useRef([]);
+  const extraSnapshotsRef = useRef(new Map()); // rowKey -> JSON of the last saved event/note
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [confirmingWipe, setConfirmingWipe] = useState(false);
@@ -790,7 +799,7 @@ export default function TaskApp() {
 
   const [view, setView] = useState(() => {
     const saved = loadLocalPrefs().view;
-    return saved === "calendario" || saved === "prioridad" ? saved : "lista";
+    return ["calendario", "prioridad", "eventos", "notas"].includes(saved) ? saved : "lista";
   });
   const [calView, setCalView] = useState(() => {
     const saved = loadLocalPrefs().calView;
@@ -815,6 +824,15 @@ export default function TaskApp() {
   const [calAddText, setCalAddText] = useState("");
   const [calUndatedOpen, setCalUndatedOpen] = useState(() => loadLocalPrefs().calUndatedOpen !== false);
   const [calPopTitle, setCalPopTitle] = useState("");
+  // eventos: arrastrar sobre los días para crear, mover la barra, estirarla
+  const [calDragEventId, setCalDragEventId] = useState(null);
+  const calDragEventOffsetRef = useRef(0);
+  const [eventDraft, setEventDraft] = useState(null); // { anchor, current } while drag-selecting days
+  const [eventEditor, setEventEditor] = useState(null); // { id|null, title, start, end, color, note, x, y }
+  const [eventResize, setEventResize] = useState(null); // { id, edge, start, end } live preview
+  const [mobileEventEdit, setMobileEventEdit] = useState(null);
+  const [mobileNoteEdit, setMobileNoteEdit] = useState(null);
+  const [draggingToNotes, setDraggingToNotes] = useState(false);
 
   const noteInputRef = useRef(null);
   const newAreaInputRef = useRef(null);
@@ -852,9 +870,12 @@ export default function TaskApp() {
         lastWriteAtRef.current = new Map();
         areasSnapshotRef.current = "[]";
         taskSnapshotsRef.current = new Map();
+        extraSnapshotsRef.current = new Map();
         setEncPass(""); setEncPass2(""); setEncError("");
         setAreas([]);
         setTasks([]);
+        setEvents([]);
+        setNotes([]);
         setBootStatus("auth");
       } else if (bootStatus !== "ready" || !hasLoadedRef.current) {
         setBootStatus("loading");
@@ -901,6 +922,25 @@ export default function TaskApp() {
     return `task:${id}`;
   }
 
+  function applyExtraCollections({ events: ev = [], notes: nt = [] }) {
+    setEvents(ev);
+    setNotes(nt);
+    eventsRef.current = ev;
+    notesRef.current = nt;
+    const snap = new Map();
+    ev.forEach((x) => snap.set(`event:${x.id}`, JSON.stringify(x)));
+    nt.forEach((x) => snap.set(`note:${x.id}`, JSON.stringify(x)));
+    extraSnapshotsRef.current = snap;
+  }
+
+  // All event/note rows as [rowKey, object] pairs (for encryption on/off).
+  function extraRowEntries() {
+    return [
+      ...eventsRef.current.map((x) => [`event:${x.id}`, x]),
+      ...notesRef.current.map((x) => [`note:${x.id}`, x]),
+    ];
+  }
+
   // ---- load current data for this user, then stay live via realtime ----
   useEffect(() => {
     if (!session) return;
@@ -942,16 +982,20 @@ export default function TaskApp() {
       return (async () => {
         let newAreas = [];
         const tasksArr = [];
+        const extra = { events: [], notes: [] };
         for (const row of rows) {
           if (row.key === "__enc_meta__") continue;
           const value = await getRowValue(row, key);
           if (value === undefined) continue;
           if (row.key === "areas") newAreas = value || [];
           else if (row.key.startsWith("task:")) tasksArr.push(value);
+          else if (row.key.startsWith("event:")) extra.events.push(value);
+          else if (row.key.startsWith("note:")) extra.notes.push(value);
         }
         tasksArr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
         setAreas(newAreas);
         setTasks(tasksArr);
+        applyExtraCollections(extra);
         areasSnapshotRef.current = JSON.stringify(newAreas);
         taskSnapshotsRef.current = new Map(tasksArr.map((t) => [t.id, JSON.stringify(t)]));
       })();
@@ -987,6 +1031,7 @@ export default function TaskApp() {
           areasSnapshotRef.current = JSON.stringify([]);
           taskSnapshotsRef.current = new Map();
         }
+        applyExtraCollections({ events: [], notes: [] });
         setIsEncrypted(false);
         hasLoadedRef.current = true;
         setBootStatus("ready");
@@ -1056,6 +1101,18 @@ export default function TaskApp() {
               return copy;
             });
             taskSnapshotsRef.current.set(id, JSON.stringify(value));
+          } else if (row.key.startsWith("event:") || row.key.startsWith("note:")) {
+            const isEvent = row.key.startsWith("event:");
+            const id = row.key.slice(isEvent ? 6 : 5);
+            const setter = isEvent ? setEvents : setNotes;
+            setter((prev) => {
+              const idx = prev.findIndex((x) => x.id === id);
+              if (idx === -1) return [...prev, value];
+              const copy = [...prev];
+              copy[idx] = value;
+              return copy;
+            });
+            extraSnapshotsRef.current.set(row.key, JSON.stringify(value));
           }
           setLastSyncAt(ts);
         }
@@ -1098,6 +1155,9 @@ export default function TaskApp() {
         { user_id: session.user.id, key: "areas", value: await encryptRowValue(key, areas), updated_at: updatedAt },
         ...(await Promise.all(tasks.map(async (t) => ({
           user_id: session.user.id, key: taskRowKey(t.id), value: await encryptRowValue(key, t), updated_at: updatedAt,
+        })))),
+        ...(await Promise.all(extraRowEntries().map(async ([rowKey, obj]) => ({
+          user_id: session.user.id, key: rowKey, value: await encryptRowValue(key, obj), updated_at: updatedAt,
         })))),
         { user_id: session.user.id, key: "__enc_meta__", value: JSON.stringify({ encrypted: true, salt }), updated_at: updatedAt },
       ];
@@ -1165,18 +1225,25 @@ export default function TaskApp() {
       const key = await deriveKeyFromPassphrase(encPass, pendingSaltRef.current);
       let newAreas = [];
       const tasksArr = [];
+      const extra = { events: [], notes: [] };
       let verifiedOne = false;
       for (const row of rows) {
         if (row.key === "__enc_meta__") continue;
-        const value = await decryptPayload(key, JSON.parse(row.value)); // throws on wrong password
+        const value = looksEncryptedValue(row.value)
+          ? await decryptPayload(key, JSON.parse(row.value)) // throws on wrong password
+          : JSON.parse(row.value);
         verifiedOne = true;
         if (row.key === "areas") newAreas = value || [];
         else if (row.key.startsWith("task:")) tasksArr.push(value);
+        else if (row.key.startsWith("event:")) extra.events.push(value);
+        else if (row.key.startsWith("note:")) extra.notes.push(value);
       }
+      tasksArr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       encryptionKeyRef.current = key;
       encSaltRef.current = pendingSaltRef.current;
       setAreas(newAreas);
       setTasks(tasksArr);
+      applyExtraCollections(extra);
       areasSnapshotRef.current = JSON.stringify(newAreas);
       taskSnapshotsRef.current = new Map(tasksArr.map((t) => [t.id, JSON.stringify(t)]));
       setEncPass("");
@@ -1206,6 +1273,7 @@ export default function TaskApp() {
       const writeRows = [
         { user_id: session.user.id, key: "areas", value: JSON.stringify(areas), updated_at: updatedAt },
         ...tasks.map((t) => ({ user_id: session.user.id, key: taskRowKey(t.id), value: JSON.stringify(t), updated_at: updatedAt })),
+        ...extraRowEntries().map(([rowKey, obj]) => ({ user_id: session.user.id, key: rowKey, value: JSON.stringify(obj), updated_at: updatedAt })),
         { user_id: session.user.id, key: "__enc_meta__", value: JSON.stringify({ encrypted: false }), updated_at: updatedAt },
       ];
       for (const r of writeRows) lastWriteAtRef.current.set(r.key, new Date(updatedAt).getTime());
@@ -1246,7 +1314,7 @@ export default function TaskApp() {
     forceImmediateSaveRef.current = false;
     const id = setTimeout(() => { saveDiff(); }, delay);
     return () => clearTimeout(id);
-  }, [areas, tasks, bootStatus, session]);
+  }, [areas, tasks, events, notes, bootStatus, session]);
 
   const savingLockRef = useRef(false);
   const savePendingRef = useRef(false);
@@ -1281,6 +1349,21 @@ export default function TaskApp() {
         if (!currentIds.has(id)) deleteKeys.push(taskRowKey(id));
       }
 
+      const extraPrev = extraSnapshotsRef.current;
+      const extraNow = new Map(extraRowEntries().map(([rowKey, obj]) => [rowKey, obj]));
+      const extraWritten = [];
+      for (const [rowKey, obj] of extraNow) {
+        const json = JSON.stringify(obj);
+        if (extraPrev.get(rowKey) !== json) {
+          writes.push({ rowKey, value: key ? await encryptRowValue(key, obj) : json });
+          extraWritten.push([rowKey, json]);
+        }
+      }
+      const extraDeleted = [];
+      for (const rowKey of extraPrev.keys()) {
+        if (!extraNow.has(rowKey)) { deleteKeys.push(rowKey); extraDeleted.push(rowKey); }
+      }
+
       if (!writes.length && !deleteKeys.length) { setSaving(false); return; }
 
       for (const w of writes) lastWriteAtRef.current.set(w.rowKey, new Date(updatedAt).getTime());
@@ -1299,7 +1382,9 @@ export default function TaskApp() {
 
       areasSnapshotRef.current = areasJson;
       for (const t of tasksRef.current) taskSnapshotsRef.current.set(t.id, JSON.stringify(t));
-      for (const dk of deleteKeys) taskSnapshotsRef.current.delete(dk.slice(5));
+      for (const dk of deleteKeys) if (dk.startsWith("task:")) taskSnapshotsRef.current.delete(dk.slice(5));
+      for (const [rowKey, json] of extraWritten) extraSnapshotsRef.current.set(rowKey, json);
+      for (const rowKey of extraDeleted) extraSnapshotsRef.current.delete(rowKey);
 
       setLastSyncAt(new Date(updatedAt).getTime());
       setSyncError(false);
@@ -1401,6 +1486,8 @@ export default function TaskApp() {
   const tasksRef = useRef(tasks);
   const areasRef = useRef(areas);
   useEffect(() => { tasksRef.current = tasks; }, [tasks]);
+  useEffect(() => { eventsRef.current = events; }, [events]);
+  useEffect(() => { notesRef.current = notes; }, [notes]);
   useEffect(() => { areasRef.current = areas; }, [areas]);
 
   useEffect(() => {
@@ -1414,6 +1501,10 @@ export default function TaskApp() {
   useEffect(() => {
     saveLocalPrefs({ calUndatedOpen });
   }, [calUndatedOpen]);
+
+  useEffect(() => {
+    saveLocalPrefs({ notificationsEnabled });
+  }, [notificationsEnabled]);
 
   useEffect(() => {
     saveLocalPrefs({ mobileCollapsedProjects: Array.from(mobileCollapsedProjects) });
@@ -1531,45 +1622,143 @@ export default function TaskApp() {
     return ["Alta", "Media", "Baja"].map((priority) => ({ priority, tasks: buckets[priority] }));
   }, [visibleTasks]);
 
+  // ---- alertas (mismo sistema que Gastos App v150+): una lista ordenada por
+  // importancia que rota en la barra de abajo cada 4 s, y un aviso del sistema
+  // con las urgentes. urgent=true → punto rojo; solo avisos → punto azul.
+  const [alertsDay, setAlertsDay] = useState(() => todayISO());
+  useEffect(() => {
+    const id = setInterval(() => setAlertsDay(todayISO()), 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const urgentItems = useMemo(() => {
-    const today = todayISO();
-    const tomorrow = addDaysISO(today, 1);
+    const today = alertsDay;
     const items = [];
-    tasks.forEach((t) => { if (t.status !== "Hecho" && t.date && t.date < today) items.push({ task: t, kind: "vencida", label: "Vencida" }); });
-    tasks.forEach((t) => { if (t.status !== "Hecho" && t.date === today) items.push({ task: t, kind: "hoy", label: "Hoy" }); });
-    tasks.forEach((t) => { if (t.status !== "Hecho" && t.date === tomorrow) items.push({ task: t, kind: "manana", label: "Mañana" }); });
-    return items;
-  }, [tasks]);
+    const placeOf = (t) => {
+      const a = areaMap[t.areaId];
+      const p = t.projectId ? a?.projects?.find((x) => x.id === t.projectId) : null;
+      return [a?.name, p?.name].filter(Boolean).join(" / ");
+    };
+    const daysBetween = (from, to) => {
+      const [y1, m1, d1] = from.split("-").map(Number);
+      const [y2, m2, d2] = to.split("-").map(Number);
+      return Math.round((new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1)) / 86400000);
+    };
+    tasks.forEach((t) => {
+      if (t.status === "Hecho" || !t.date) return;
+      const n = daysBetween(today, t.date);
+      const base = { key: `t:${t.id}`, task: t, title: t.title, color: areaMap[t.areaId]?.color, go: { taskId: t.id, date: t.date } };
+      if (n < 0) items.push({ ...base, kind: "vencida", rank: 0, urgent: true, chip: "Vencida", meta: `${placeOf(t)} · venció ${n === -1 ? "ayer" : `hace ${-n} días`}`, sortDate: t.date });
+      else if (n === 0) items.push({ ...base, kind: "hoy", rank: 1, urgent: true, chip: "Hoy", meta: placeOf(t), sortDate: t.date });
+      else if (n === 1) items.push({ ...base, kind: "manana", rank: 2, urgent: true, chip: "Mañana", meta: placeOf(t), sortDate: t.date });
+      else if (n <= 3) items.push({ ...base, kind: "pronto", rank: 4, chip: `En ${n} días`, meta: `${placeOf(t)} · ${fmtDate(t.date)}`, sortDate: t.date });
+    });
+    events.forEach((ev) => {
+      if (!ev.start) return;
+      const end = ev.end || ev.start;
+      const base = { key: `e:${ev.id}`, event: ev, title: ev.title || "Evento", color: ev.color, go: { eventId: ev.id, date: ev.start } };
+      const span = ev.start === end ? fmtDate(ev.start) : `${fmtDate(ev.start)} al ${fmtDate(end)}`;
+      if (ev.start <= today && end >= today) {
+        const total = daysBetween(ev.start, end) + 1;
+        const nth = daysBetween(ev.start, today) + 1;
+        items.push({ ...base, kind: "evento", rank: 3, chip: total > 1 ? `Día ${nth} de ${total}` : "Evento hoy", meta: total > 1 ? `hasta el ${fmtDate(end)}` : "", sortDate: ev.start });
+      } else {
+        const n = daysBetween(today, ev.start);
+        if (n >= 1 && n <= 3) items.push({ ...base, kind: "eventoPronto", rank: 5, chip: n === 1 ? "Mañana" : `En ${n} días`, meta: span, sortDate: ev.start });
+      }
+    });
+    return items.sort((a, b) => a.rank - b.rank || (a.sortDate < b.sortDate ? -1 : a.sortDate > b.sortDate ? 1 : 0));
+  }, [tasks, events, areaMap, alertsDay]);
 
   useEffect(() => {
-    if (urgentItems.length === 0) return;
-    setUrgentIndex((i) => (i >= urgentItems.length ? 0 : i));
-    const id = setInterval(() => setUrgentIndex((i) => (i + 1) % urgentItems.length), 3000);
+    if (urgentItems.length < 2 || urgentPaused) return;
+    const id = setInterval(() => setUrgentIndex((i) => (i + 1) % urgentItems.length), 4000);
     return () => clearInterval(id);
-  }, [urgentItems.length]);
+  }, [urgentItems.length, urgentPaused]);
+  useEffect(() => {
+    if (urgentIndex >= urgentItems.length) setUrgentIndex(0);
+  }, [urgentItems.length, urgentIndex]);
 
-  function fireUrgentNotification() {
-    if (!notificationsEnabled || typeof Notification === "undefined") return;
-    if (urgentItems.length === 0) return;
-    const vencidas = urgentItems.filter((i) => i.kind === "vencida").length;
-    const hoy = urgentItems.filter((i) => i.kind === "hoy").length;
-    const manana = urgentItems.filter((i) => i.kind === "manana").length;
-    const parts = [];
-    if (vencidas) parts.push(`${vencidas} vencida${vencidas === 1 ? "" : "s"}`);
-    if (hoy) parts.push(`${hoy} para hoy`);
-    if (manana) parts.push(`${manana} para mañana`);
-    try {
-      new Notification("Task App", { body: `Tenés ${parts.join(", ")}.`, silent: false });
-    } catch { /* not available outside Electron/a notification-capable browser */ }
+  function alertsNotificationBody(list) {
+    const urgent = list.filter((i) => i.urgent);
+    if (!urgent.length) return null;
+    return urgent.slice(0, 4).map((i) => `${i.chip}: ${i.title}${i.meta ? ` (${i.meta})` : ""}`).join("\n")
+      + (urgent.length > 4 ? `\ny ${urgent.length - 4} más` : "");
   }
 
+  const urgentItemsRef = useRef(urgentItems);
+  urgentItemsRef.current = urgentItems;
   useEffect(() => {
-    if (!notificationsEnabled) return;
-    fireUrgentNotification();
-    const id = setInterval(fireUrgentNotification, 60 * 60 * 1000); // cada hora
-    return () => clearInterval(id);
+    if (!notificationsEnabled || bootStatus !== "ready" || typeof Notification === "undefined") return;
+    let stopped = false;
+    const fire = () => {
+      if (stopped || Notification.permission !== "granted") return;
+      const body = alertsNotificationBody(urgentItemsRef.current);
+      if (!body) return;
+      try { new Notification("Task App — alertas", { body, tag: "task-alerts" }); } catch { /* not available here */ }
+    };
+    const first = () => { setTimeout(fire, 4000); };
+    if (Notification.permission === "default") Notification.requestPermission().then(first).catch(() => {});
+    else first();
+    const id = setInterval(fire, 60 * 60 * 1000); // cada hora
+    return () => { stopped = true; clearInterval(id); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notificationsEnabled]);
+  }, [notificationsEnabled, bootStatus]);
+
+  function goToAlert(item) {
+    if (!item) return;
+    setShowNotifPanel(false);
+    if (isMobile) {
+      if (item.task) openMobileTask(item.task.id, item.task.areaId);
+      else if (item.event) { setMobileEventEdit({ ...item.event }); }
+      return;
+    }
+    const today = todayISO();
+    setView("calendario");
+    if (item.task) {
+      setCalView("dia");
+      focusDay(item.task.date < today ? today : item.task.date);
+    } else if (item.event) {
+      setCalView("mes");
+      focusDay(item.event.start <= today && (item.event.end || item.event.start) >= today ? today : item.event.start);
+    }
+  }
+
+  function renderAlertsBar() {
+    const n = urgentItems.length;
+    const current = n ? urgentItems[urgentIndex % n] : null;
+    const anyUrgent = urgentItems.some((i) => i.urgent);
+    return (
+      <div
+        className={`urgent-bar ${current ? "urgent-bar--tappable" : ""}`}
+        onMouseEnter={() => setUrgentPaused(true)}
+        onMouseLeave={() => setUrgentPaused(false)}
+        onClick={() => current && goToAlert(current)}
+        title={current ? "Ir a esta alerta" : undefined}
+      >
+        <span className={`urgent-label ${anyUrgent ? "" : "urgent-label--off"} ${current && !anyUrgent ? "urgent-label--info" : ""}`}>
+          <span className={`urgent-dot ${anyUrgent ? "" : "urgent-dot--off"}`} />ALERTAS
+        </span>
+        {current ? (
+          <span className="urgent-item" key={current.key + ":" + urgentIndex}>
+            <span className={`urgent-chip urgent-chip--${current.kind}`}>{current.chip}</span>
+            {current.color && <span className="urgent-swatch" style={{ background: current.color }} />}
+            <span className="urgent-title">{current.title}</span>
+            {current.meta && <span className="urgent-meta">{current.meta}</span>}
+          </span>
+        ) : (
+          <span className="urgent-empty">Sin vencimientos ni alertas por ahora.</span>
+        )}
+        {n > 1 && (
+          <span className="urgent-nav" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setUrgentIndex((i) => (i - 1 + n) % n)} title="Anterior"><ChevronLeft size={15} /></button>
+            <span className="urgent-count">{(urgentIndex % n) + 1}/{n}</span>
+            <button onClick={() => setUrgentIndex((i) => (i + 1) % n)} title="Siguiente"><ChevronRight size={15} /></button>
+          </span>
+        )}
+      </div>
+    );
+  }
 
   // Same filters the list view applies (área, proyecto, favoritas, búsqueda,
   // ocultar hechas), so the calendar never shows something the list hides.
@@ -1624,7 +1813,7 @@ export default function TaskApp() {
   }
 
   function exportData() {
-    const blob = new Blob([JSON.stringify({ areas, tasks }, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ areas, tasks, events, notes }, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "taskapp_backup_" + new Date().toISOString().slice(0, 10) + ".json";
@@ -1644,6 +1833,8 @@ export default function TaskApp() {
       if (!Array.isArray(data.areas) || !Array.isArray(data.tasks)) { showToast("El archivo no tiene el formato esperado"); return; }
       setAreas(data.areas);
       setTasks(data.tasks);
+      setEvents(Array.isArray(data.events) ? data.events : []);
+      setNotes(Array.isArray(data.notes) ? data.notes : []);
       showToast("Datos restaurados");
     };
     reader.readAsText(file);
@@ -1652,6 +1843,8 @@ export default function TaskApp() {
   function wipeAllData() {
     setAreas([]);
     setTasks([]);
+    setEvents([]);
+    setNotes([]);
     setConfirmingWipe(false);
     showToast("Todo borrado");
   }
@@ -2180,7 +2373,7 @@ export default function TaskApp() {
   function calDropProps(target) {
     return {
       onDragOver: (e) => {
-        if (!calDragTaskId) return;
+        if (!calDragTaskId && !(calDragEventId && target !== "undated")) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
         if (calDropTarget !== target) setCalDropTarget(target);
@@ -2190,12 +2383,268 @@ export default function TaskApp() {
       },
       onDrop: (e) => {
         e.preventDefault();
-        const id = e.dataTransfer.getData("text/plain") || calDragTaskId;
-        setCalDragTaskId(null);
+        const raw = e.dataTransfer.getData("text/plain");
         setCalDropTarget(null);
+        if (calDragEventId || raw.startsWith("event:")) {
+          const evId = calDragEventId || raw.slice(6);
+          setCalDragEventId(null);
+          if (target !== "undated") moveEventTo(evId, addDaysISO(target, -calDragEventOffsetRef.current));
+          return;
+        }
+        const id = raw || calDragTaskId;
+        setCalDragTaskId(null);
         if (id) calSetTaskDate(id, target === "undated" ? null : target);
       },
     };
+  }
+
+  // ================= EVENTOS =================
+  function isoDiff(a, b) {
+    const [y1, m1, d1] = a.split("-").map(Number);
+    const [y2, m2, d2] = b.split("-").map(Number);
+    return Math.round((new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1)) / 86400000);
+  }
+
+  function eventRange(ev) {
+    if (eventResize && eventResize.id === ev.id) return { start: eventResize.start, end: eventResize.end };
+    return { start: ev.start, end: ev.end || ev.start };
+  }
+
+  const visibleEvents = useMemo(() => events.filter((ev) => ev.start), [events]);
+
+  function eventsOn(iso) {
+    return visibleEvents
+      .filter((ev) => { const r = eventRange(ev); return r.start <= iso && r.end >= iso; })
+      .sort((a, b) => (eventRange(a).start < eventRange(b).start ? -1 : 1));
+  }
+
+  // Lays the events that touch these consecutive days out into lanes, the
+  // way Google Calendar stacks all-day bars: longest first, first free lane.
+  function layoutEvents(isos) {
+    const first = isos[0], last = isos[isos.length - 1];
+    const list = visibleEvents
+      .map((ev) => ({ ev, ...eventRange(ev) }))
+      .filter((x) => x.start <= last && x.end >= first)
+      .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : isoDiff(b.start, b.end) - isoDiff(a.start, a.end)));
+    const laneEnds = [];
+    const segs = list.map((x) => {
+      const segStart = x.start < first ? first : x.start;
+      const segEnd = x.end > last ? last : x.end;
+      const col = isos.indexOf(segStart);
+      const span = isoDiff(segStart, segEnd) + 1;
+      let lane = laneEnds.findIndex((endCol) => endCol < col);
+      if (lane === -1) { lane = laneEnds.length; laneEnds.push(col + span - 1); } else laneEnds[lane] = col + span - 1;
+      return { ev: x.ev, col, span, lane, segStart, segEnd, contLeft: x.start < first, contRight: x.end > last, start: x.start, end: x.end };
+    });
+    return { segs, lanes: laneEnds.length };
+  }
+
+  function moveEventTo(id, newStart) {
+    setEvents((prev) => prev.map((ev) => {
+      if (ev.id !== id) return ev;
+      const len = isoDiff(ev.start, ev.end || ev.start);
+      return { ...ev, start: newStart, end: addDaysISO(newStart, len), updatedAt: Date.now() };
+    }));
+    showToast(`Evento movido al ${fmtDate(newStart)}`);
+  }
+
+  function openEventEditor(data, x, y) {
+    setCalPopover(null);
+    setEventEditor({ id: null, title: "", note: "", color: EVENT_COLORS[events.length % EVENT_COLORS.length], ...data, x, y });
+  }
+
+  function saveEventEditor() {
+    if (!eventEditor) return;
+    let { start, end } = eventEditor;
+    if (!start) return;
+    if (!end) end = start;
+    if (end < start) [start, end] = [end, start];
+    const title = eventEditor.title.trim() || "Evento";
+    if (eventEditor.id) {
+      setEvents((prev) => prev.map((ev) => (ev.id === eventEditor.id ? { ...ev, title, start, end, color: eventEditor.color, note: eventEditor.note || "", updatedAt: Date.now() } : ev)));
+      showToast("Evento guardado");
+    } else {
+      setEvents((prev) => [...prev, { id: uid(), title, start, end, color: eventEditor.color, note: eventEditor.note || "", createdAt: Date.now() }]);
+      showToast("Evento creado");
+    }
+    setEventEditor(null);
+  }
+
+  function deleteEvent(id) {
+    setEvents((prev) => prev.filter((ev) => ev.id !== id));
+    setEventEditor(null);
+    setMobileEventEdit(null);
+    showToast("Evento eliminado");
+  }
+
+  function eventSpanLabel(ev) {
+    const end = ev.end || ev.start;
+    if (end === ev.start) return fmtDate(ev.start);
+    const days = isoDiff(ev.start, end) + 1;
+    return `${fmtDate(ev.start)} al ${fmtDate(end)} · ${days} días`;
+  }
+
+  // drag-select days to create an event (mouse only)
+  function eventSelectStart(e, iso) {
+    if (e.button !== 0) return;
+    if (e.target.closest(".cal-chip, .cal-ev, button, input, textarea, .cal-more")) return;
+    e.preventDefault();
+    setEventDraft({ anchor: iso, current: iso });
+  }
+  function eventSelectEnter(iso) {
+    setEventDraft((d) => (d && d.current !== iso ? { ...d, current: iso } : d));
+  }
+  useEffect(() => {
+    if (!eventDraft) return;
+    function onUp(e) {
+      setEventDraft((d) => {
+        if (d && d.anchor !== d.current) {
+          const start = d.anchor < d.current ? d.anchor : d.current;
+          const end = d.anchor < d.current ? d.current : d.anchor;
+          setTimeout(() => openEventEditor({ start, end }, e.clientX, e.clientY), 0);
+        }
+        return null;
+      });
+    }
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!eventDraft]);
+  function inDraft(iso) {
+    if (!eventDraft) {
+      // keep the picked days highlighted while the "Nuevo evento" popover is open
+      if (eventEditor && !eventEditor.id && eventEditor.start) {
+        const a = eventEditor.end && eventEditor.end < eventEditor.start ? eventEditor.end : eventEditor.start;
+        const b = eventEditor.end && eventEditor.end > eventEditor.start ? eventEditor.end : eventEditor.start;
+        return iso >= a && iso <= b;
+      }
+      return false;
+    }
+    const a = eventDraft.anchor < eventDraft.current ? eventDraft.anchor : eventDraft.current;
+    const b = eventDraft.anchor < eventDraft.current ? eventDraft.current : eventDraft.anchor;
+    return iso >= a && iso <= b;
+  }
+
+  // stretch an event from either end
+  function startEventResize(e, ev, edge) {
+    e.preventDefault();
+    e.stopPropagation();
+    setEventResize({ id: ev.id, edge, start: ev.start, end: ev.end || ev.start });
+  }
+  useEffect(() => {
+    if (!eventResize) return;
+    function onMove(e) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const iso = el && el.closest && el.closest("[data-cal-iso]")?.getAttribute("data-cal-iso");
+      if (!iso) return;
+      setEventResize((r) => {
+        if (!r) return r;
+        if (r.edge === "end") return { ...r, end: iso < r.start ? r.start : iso };
+        return { ...r, start: iso > r.end ? r.end : iso };
+      });
+    }
+    function onUp() {
+      setEventResize((r) => {
+        if (r) setEvents((prev) => prev.map((ev) => (ev.id === r.id ? { ...ev, start: r.start, end: r.end, updatedAt: Date.now() } : ev)));
+        return null;
+      });
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    document.body.style.cursor = "ew-resize";
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); document.body.style.cursor = ""; };
+  }, [!!eventResize]);
+
+  function renderEventBar(seg, { rowHeight = 22, topOffset = 0 } = {}) {
+    const { ev } = seg;
+    const color = ev.color || EVENT_COLORS[0];
+    const isEditing = eventEditor?.id === ev.id;
+    return (
+      <div
+        key={ev.id + ":" + seg.segStart}
+        className={`cal-ev ${seg.contLeft ? "cal-ev--cont-left" : ""} ${seg.contRight ? "cal-ev--cont-right" : ""} ${calDragEventId === ev.id ? "cal-ev--dragging" : ""} ${isEditing ? "cal-ev--open" : ""}`}
+        style={{
+          "--ev": color,
+          left: `calc(${(seg.col * 100) / 7}% + 4px)`,
+          width: `calc(${(seg.span * 100) / 7}% - 8px)`,
+          top: topOffset + seg.lane * rowHeight,
+        }}
+        draggable
+        title={`${ev.title} · ${eventSpanLabel({ ...ev, start: seg.start, end: seg.end })}`}
+        onDragStart={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          const colIdx = Math.min(seg.span - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * seg.span)));
+          calDragEventOffsetRef.current = isoDiff(seg.start, seg.segStart) + colIdx;
+          e.dataTransfer.setData("text/plain", "event:" + ev.id);
+          e.dataTransfer.effectAllowed = "move";
+          setCalDragEventId(ev.id);
+          setEventEditor(null);
+        }}
+        onDragEnd={() => { setCalDragEventId(null); setCalDropTarget(null); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          const r = e.currentTarget.getBoundingClientRect();
+          openEventEditor({ ...ev, end: ev.end || ev.start }, r.left, r.bottom);
+        }}
+      >
+        {!seg.contLeft && <span className="cal-ev-handle cal-ev-handle--start" draggable={false} onMouseDown={(e) => startEventResize(e, ev, "start")} />}
+        <span className="cal-ev-title">{seg.contLeft ? "← " : ""}{ev.title}</span>
+        {!seg.contRight && <span className="cal-ev-handle cal-ev-handle--end" draggable={false} onMouseDown={(e) => startEventResize(e, ev, "end")} />}
+      </div>
+    );
+  }
+
+  function renderEventEditor() {
+    if (!eventEditor) return null;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const w = 320;
+    const left = Math.min(Math.max(8, eventEditor.x - 20), vw - w - 8);
+    const fitsBelow = eventEditor.y + 330 < vh;
+    const style = fitsBelow ? { left, top: eventEditor.y + 8, width: w } : { left, bottom: Math.max(8, vh - eventEditor.y + 8), width: w };
+    const set = (patch) => setEventEditor((ed) => ({ ...ed, ...patch }));
+    const days = eventEditor.start && eventEditor.end ? Math.abs(isoDiff(eventEditor.start, eventEditor.end)) + 1 : 1;
+    return createPortal(
+      <>
+        <div className="cal-pop-scrim" onClick={() => setEventEditor(null)} />
+        <div className="cal-pop cal-pop--event" style={{ ...style, "--chip": eventEditor.color }} onClick={(e) => e.stopPropagation()}>
+          <div className="cal-pop-area">
+            <span className="cal-pop-area-dot" />
+            {eventEditor.id ? "Evento" : "Nuevo evento"} · {days} {days === 1 ? "día" : "días"}
+            <button className="cal-pop-close" onClick={() => setEventEditor(null)}><X size={14} /></button>
+          </div>
+          <input
+            className="cal-pop-title cal-pop-title--input"
+            autoFocus
+            placeholder="Vacaciones, viaje, congreso…"
+            value={eventEditor.title}
+            onChange={(e) => set({ title: e.target.value })}
+            onKeyDown={(e) => { if (e.key === "Enter") saveEventEditor(); if (e.key === "Escape") setEventEditor(null); }}
+          />
+          <div className="cal-pop-fields">
+            <span className="cal-pop-label">Desde</span>
+            <DateField value={eventEditor.start} onChange={(v) => v && set({ start: v, end: eventEditor.end && eventEditor.end < v ? v : eventEditor.end })} weekStartsSunday={weekStartsSunday} />
+            <span className="cal-pop-label">Hasta</span>
+            <DateField value={eventEditor.end} onChange={(v) => v && set({ end: v < eventEditor.start ? eventEditor.start : v })} weekStartsSunday={weekStartsSunday} />
+            <span className="cal-pop-label">Color</span>
+            <span className="ev-swatches">
+              {EVENT_COLORS.map((c) => (
+                <button key={c} className={`ev-swatch ${eventEditor.color === c ? "ev-swatch--on" : ""}`} style={{ background: c }} onClick={() => set({ color: c })} title="Color" />
+              ))}
+            </span>
+          </div>
+          <textarea className="ev-note" rows={2} placeholder="Nota (opcional)" value={eventEditor.note || ""} onChange={(e) => set({ note: e.target.value })} />
+          <div className="cal-pop-actions">
+            {eventEditor.id && (
+              <button className="cal-pop-btn cal-pop-btn--danger" onClick={() => deleteEvent(eventEditor.id)}><Trash2 size={13} /> Eliminar</button>
+            )}
+            <span style={{ flex: 1 }} />
+            <button className="cal-pop-btn" onClick={() => setEventEditor(null)}>Cancelar</button>
+            <button className="cal-pop-btn cal-pop-btn--primary" onClick={saveEventEditor}>{eventEditor.id ? "Guardar" : "Crear evento"}</button>
+          </div>
+        </div>
+      </>,
+      document.body
+    );
   }
 
   function openCalTaskPopover(e, t) {
@@ -2269,6 +2718,7 @@ export default function TaskApp() {
     if (mobileScreen === "task") { setMobileScreen("area"); setMobileTaskId(null); }
     else if (mobileScreen === "quickadd") { setMobileScreen(mobileAreaId ? "area" : "areas"); }
     else if (mobileScreen === "area") { setMobileScreen("areas"); setMobileAreaId(null); setMobileSearch(""); }
+    else if (mobileScreen === "notes" || mobileScreen === "events") { setMobileScreen("areas"); setMobileSearch(""); }
   }
   function mobileToggleDone(id, currentlyDone) {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: currentlyDone ? "Por hacer" : "Hecho" } : t)));
@@ -2316,25 +2766,7 @@ export default function TaskApp() {
   }
 
   function renderMobileUrgentBar() {
-    const current = urgentItems[urgentIndex] || null;
-    return (
-      <div
-        className={`urgent-bar ${current ? "urgent-bar--tappable" : ""}`}
-        onClick={() => { if (current) openMobileTask(current.task.id, current.task.areaId); }}
-      >
-        <span className={`urgent-label ${current ? "" : "urgent-label--off"}`}><span className={`urgent-dot ${current ? "" : "urgent-dot--off"}`} />URGENTES</span>
-        {current ? (
-          <>
-            <span className={`urgent-chip urgent-chip--${current.kind}`}>
-              {current.kind === "vencida" ? "Vencida" : current.kind === "hoy" ? "Hoy" : "Mañana"}
-            </span>
-            <span className="urgent-title">{current.task.title}</span>
-          </>
-        ) : (
-          <span className="urgent-empty">Sin vencimientos ni alertas por ahora.</span>
-        )}
-      </div>
-    );
+    return renderAlertsBar();
   }
 
   function renderMobileTaskIcons(t) {
@@ -2503,9 +2935,14 @@ export default function TaskApp() {
           )}
         </div>
         {revealed ? (
-          <button className="m-row-delete" onClick={() => setDeleteTarget({ type: "task", id: t.id })}>
-            <Trash2 size={16} /> Eliminar
-          </button>
+          <span className="m-row-actions">
+            <button className="m-row-tonote" onClick={() => convertTaskToNote(t.id)}>
+              <StickyNote size={16} /> Notas
+            </button>
+            <button className="m-row-delete" onClick={() => setDeleteTarget({ type: "task", id: t.id })}>
+              <Trash2 size={16} /> Eliminar
+            </button>
+          </span>
         ) : (
           <>
             {renderMobileTaskIcons(t)}
@@ -2637,6 +3074,18 @@ export default function TaskApp() {
             </>
           ) : (
             <>
+              <div className="m-special-row">
+                <button className="m-special-card" style={{ "--chip": "#A78BFA" }} onClick={() => { setMobileScreen("events"); setMobileSearch(""); }}>
+                  <CalendarRange size={18} />
+                  <span className="m-special-name">Eventos</span>
+                  <span className="m-area-count">{eventGroups().now.length + eventGroups().next.length}</span>
+                </button>
+                <button className="m-special-card" style={{ "--chip": "#F2AB43" }} onClick={() => { setMobileScreen("notes"); setMobileSearch(""); }}>
+                  <StickyNote size={18} />
+                  <span className="m-special-name">Notas</span>
+                  <span className="m-area-count">{notes.length}</span>
+                </button>
+              </div>
               {visibleOrderedAreas.map((a) => (
                 renamingAreaId === a.id ? (
                   <div key={a.id} className="m-area-card m-area-card--renaming" style={{ "--chip": a.color }}>
@@ -2986,6 +3435,10 @@ export default function TaskApp() {
               </div>
             )}
           </div>
+          <button className="m-detail-action" onClick={() => { const id = t.id; setMobileScreen("area"); setMobileTaskId(null); convertTaskToNote(id); }}>
+            <StickyNote size={17} /> Pasar a Notas
+            <span>La saca de las tareas y la guarda como nota</span>
+          </button>
         </div>
         {renderMobileUrgentBar()}
       </div>
@@ -3059,6 +3512,397 @@ export default function TaskApp() {
         </div>
       </div>
     );
+  }
+
+  // ================= NOTAS =================
+  function relTimeLabel(ms) {
+    if (!ms) return "";
+    const d = new Date(ms);
+    const iso = dateToISOLocal(d);
+    const today = todayISO();
+    if (iso === today) return "hoy";
+    if (iso === addDaysISO(today, -1)) return "ayer";
+    const n = isoDiff(iso, today);
+    if (n > 0 && n < 7) return `hace ${n} días`;
+    return fmtDate(iso);
+  }
+
+  function notePlace(n) {
+    const a = n.areaId ? areaMap[n.areaId] : null;
+    const p = a && n.projectId ? a.projects?.find((x) => x.id === n.projectId) : null;
+    return { area: a, label: [a?.name, p?.name].filter(Boolean).join(" / ") };
+  }
+
+  function convertTaskToNote(taskId) {
+    const t = tasks.find((x) => x.id === taskId);
+    if (!t) return;
+    const note = {
+      id: uid(), title: t.title, body: t.note || "", areaId: t.areaId || null, projectId: t.projectId || null,
+      fromTask: { status: t.status, priority: t.priority, date: t.date || null }, createdAt: Date.now(),
+    };
+    setNotes((prev) => [note, ...prev]);
+    setTasks((prev) => prev.filter((x) => x.id !== taskId));
+    setDraggedTaskId(null); setDragOverKey(null); setCalDragTaskId(null); setCalDropTarget(null);
+    setCalPopover(null);
+    setMobileRevealedTaskId(null);
+    forceImmediateSaveRef.current = true;
+    showToast("Guardada en Notas");
+  }
+
+  function noteToTask(noteId) {
+    const n = notes.find((x) => x.id === noteId);
+    if (!n) return;
+    const areaId = n.areaId && areaMap[n.areaId] ? n.areaId : ensureArea("General");
+    const projectId = n.projectId && areaMap[areaId]?.projects?.some((p) => p.id === n.projectId) ? n.projectId : null;
+    const task = {
+      id: uid(), areaId, projectId, title: (n.title || "").trim() || (n.body || "").split("\n")[0].slice(0, 120) || "Nota",
+      note: (n.body || "").replace(/\s*\n\s*/g, " · ").trim(), status: "Por hacer",
+      priority: n.fromTask?.priority || "Media", date: n.fromTask?.date || null,
+    };
+    setTasks((prev) => reassignGroupOrder([...prev, task], areaId, projectId));
+    setNotes((prev) => prev.filter((x) => x.id !== noteId));
+    setMobileNoteEdit(null);
+    showToast("Volvió a tareas");
+  }
+
+  function createNote({ title = "", body = "" } = {}) {
+    const note = {
+      id: uid(), title, body, createdAt: Date.now(),
+      areaId: selectedAreaId !== "all" ? selectedAreaId : null,
+      projectId: selectedAreaId !== "all" ? selectedProjectId || null : null,
+    };
+    setNotes((prev) => [note, ...prev]);
+    return note;
+  }
+
+  function updateNote(id, patch) {
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch, updatedAt: Date.now() } : n)));
+  }
+
+  function deleteNote(id) {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+    setMobileNoteEdit(null);
+    showToast("Nota eliminada");
+  }
+
+  const visibleNotes = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return notes
+      .filter((n) => selectedAreaId === "all" || n.areaId === selectedAreaId)
+      .filter((n) => !q || (n.title || "").toLowerCase().includes(q) || (n.body || "").toLowerCase().includes(q))
+      .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+  }, [notes, search, selectedAreaId]);
+
+  const taskDragActive = !!(draggedTaskId || calDragTaskId);
+  function notesDropProps() {
+    return {
+      onDragOver: (e) => {
+        if (!draggedTaskId && !calDragTaskId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (!draggingToNotes) setDraggingToNotes(true);
+      },
+      onDragLeave: (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDraggingToNotes(false); },
+      onDrop: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDraggingToNotes(false);
+        const raw = e.dataTransfer.getData("text/plain");
+        const id = draggedTaskId || calDragTaskId || (raw && !raw.startsWith("event:") ? raw : null);
+        if (id) convertTaskToNote(id);
+      },
+    };
+  }
+
+  function autoGrow(el) {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }
+
+  function renderNotesView() {
+    return (
+      <div className={`notes-wrap ${draggingToNotes ? "notes-wrap--drop" : ""}`} {...notesDropProps()}>
+        <div className="notes-new">
+          <StickyNote size={16} />
+          <input
+            placeholder="Escribí una nota y apretá Enter"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.currentTarget.value.trim()) {
+                createNote({ title: e.currentTarget.value.trim() });
+                e.currentTarget.value = "";
+                showToast("Nota creada");
+              }
+            }}
+          />
+        </div>
+        <div className="notes-hint">Para guardar una tarea como nota, arrastrala hasta <b>Notas</b> en la barra lateral. Sale de la lista de tareas y queda acá.</div>
+        {visibleNotes.length === 0 ? (
+          <div className="notes-empty">
+            {search.trim() ? `Ninguna nota coincide con "${search.trim()}".` : "Todavía no hay notas. Escribí una arriba o arrastrá una tarea hasta Notas."}
+          </div>
+        ) : (
+          <div className="notes-grid">
+            {visibleNotes.map((n) => {
+              const { area, label } = notePlace(n);
+              return (
+                <div key={n.id} className="note-card" style={{ "--chip": area?.color || "var(--border-strong)" }}>
+                  <input
+                    className="note-title"
+                    defaultValue={n.title}
+                    key={n.id + ":t:" + (n.updatedAt || 0)}
+                    placeholder="Sin título"
+                    onBlur={(e) => { if (e.target.value !== n.title) updateNote(n.id, { title: e.target.value }); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                  />
+                  <textarea
+                    className="note-body"
+                    defaultValue={n.body}
+                    key={n.id + ":b:" + (n.updatedAt || 0)}
+                    placeholder="Escribí algo…"
+                    rows={2}
+                    ref={autoGrow}
+                    onInput={(e) => autoGrow(e.target)}
+                    onBlur={(e) => { if (e.target.value !== (n.body || "")) updateNote(n.id, { body: e.target.value }); }}
+                  />
+                  <div className="note-foot">
+                    {label && <span className="note-place"><span className="note-place-dot" />{label}</span>}
+                    <span className="note-date">{n.fromTask ? "Era una tarea · " : ""}{relTimeLabel(n.updatedAt || n.createdAt)}</span>
+                    <span style={{ flex: 1 }} />
+                    <button className="note-act" onClick={() => noteToTask(n.id)} title="Volver a convertirla en tarea"><Undo2 size={13} /> A tareas</button>
+                    <button className="note-act note-act--danger" onClick={() => deleteNote(n.id)} title="Eliminar nota"><Trash2 size={13} /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function eventGroups() {
+    const today = todayISO();
+    const list = [...events].filter((e) => e.start).sort((a, b) => (a.start < b.start ? -1 : 1));
+    return {
+      now: list.filter((e) => e.start <= today && (e.end || e.start) >= today),
+      next: list.filter((e) => e.start > today),
+      past: list.filter((e) => (e.end || e.start) < today).reverse(),
+    };
+  }
+
+  function eventWhenLabel(ev) {
+    const today = todayISO();
+    const end = ev.end || ev.start;
+    if (ev.start <= today && end >= today) {
+      const total = isoDiff(ev.start, end) + 1;
+      return total > 1 ? `Día ${isoDiff(ev.start, today) + 1} de ${total}` : "Hoy";
+    }
+    if (ev.start > today) {
+      const n = isoDiff(today, ev.start);
+      return n === 1 ? "Mañana" : `En ${n} días`;
+    }
+    const n = isoDiff(end, today);
+    return n === 1 ? "Terminó ayer" : `Hace ${n} días`;
+  }
+
+  function renderEventsView() {
+    const g = eventGroups();
+    const section = (label, list, cls) => list.length > 0 && (
+      <div className="events-section">
+        <div className="events-section-title">{label} <span>{list.length}</span></div>
+        {list.map((ev) => (
+          <div key={ev.id} className={`event-card ${cls || ""}`} style={{ "--ev": ev.color || EVENT_COLORS[0] }}>
+            <button
+              className="event-card-main"
+              onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); openEventEditor({ ...ev, end: ev.end || ev.start }, r.left + 40, r.bottom); }}
+            >
+              <span className="event-card-bar" />
+              <span className="event-card-text">
+                <span className="event-card-title">{ev.title}</span>
+                <span className="event-card-span">{eventSpanLabel(ev)}{ev.note ? ` · ${ev.note}` : ""}</span>
+              </span>
+              <span className="event-card-when">{eventWhenLabel(ev)}</span>
+            </button>
+            <button className="note-act" onClick={() => { setView("calendario"); setCalView("mes"); focusDay(ev.start); }} title="Ver en el calendario"><CalendarIcon size={13} /> Ver</button>
+          </div>
+        ))}
+      </div>
+    );
+    return (
+      <div className="events-wrap">
+        <div className="events-head">
+          <div className="events-head-text">Vacaciones, viajes, rodajes o cualquier cosa que dure uno o varios días. También podés crearlos arrastrando sobre los días en el Calendario.</div>
+          <button
+            className="procesar-btn"
+            onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); openEventEditor({ start: todayISO(), end: todayISO() }, r.left - 200, r.bottom); }}
+          ><Plus size={14} /> Nuevo evento</button>
+        </div>
+        {events.length === 0 && <div className="notes-empty">Todavía no hay eventos.</div>}
+        {section("En curso", g.now)}
+        {section("Próximos", g.next)}
+        {section("Pasados", g.past.slice(0, 20), "event-card--past")}
+        {renderEventEditor()}
+      </div>
+    );
+  }
+
+  // ================= MOBILE: NOTAS / EVENTOS =================
+  function renderMobileNotesScreen() {
+    const q = mobileSearch.trim().toLowerCase();
+    const list = [...notes]
+      .filter((n) => !q || (n.title || "").toLowerCase().includes(q) || (n.body || "").toLowerCase().includes(q))
+      .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+    return (
+      <div className="m-screen" style={{ "--chip": "#F2AB43" }} {...mobileSwipeHandlers(true)}>
+        {renderMobileBrandBar()}
+        <div className="m-topbar">
+          <div className="m-toolbar">
+            <button className="m-pill" onClick={mobileGoBack} title="Volver"><ChevronLeft size={20} /></button>
+            <div className="m-header-title"><StickyNote size={15} />NOTAS</div>
+            <button className="m-add-btn" onClick={() => setMobileNoteEdit({ id: null, title: "", body: "" })} title="Nueva nota"><Plus size={20} strokeWidth={2.6} /></button>
+          </div>
+          <div className="m-toolbar">
+            <div className="m-search">
+              <Search size={15} className="m-search-icon" />
+              <input placeholder="Buscar en notas" value={mobileSearch} onChange={(e) => setMobileSearch(e.target.value)} />
+            </div>
+          </div>
+        </div>
+        <div className="m-list">
+          {list.length === 0 && (
+            <div className="m-empty-hint">{q ? `Sin resultados para "${mobileSearch}"` : "Todavía no hay notas. Tocá + para crear una, o deslizá una tarea hacia la izquierda y tocá Notas."}</div>
+          )}
+          {list.map((n) => {
+            const { area, label } = notePlace(n);
+            return (
+              <button key={n.id} className="m-note-card" style={{ "--chip": area?.color || "var(--border-strong)" }} onClick={() => setMobileNoteEdit({ ...n })}>
+                <span className="m-note-title">{n.title || "Sin título"}</span>
+                {n.body && <span className="m-note-body">{n.body}</span>}
+                <span className="m-note-meta">
+                  {label && <><span className="note-place-dot" />{label} · </>}
+                  {n.fromTask ? "Era una tarea · " : ""}{relTimeLabel(n.updatedAt || n.createdAt)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {renderMobileUrgentBar()}
+      </div>
+    );
+  }
+
+  function renderMobileEventsScreen() {
+    const g = eventGroups();
+    const section = (label, list) => list.length > 0 && (
+      <div className="m-card" style={{ "--chip": "#A78BFA" }}>
+        <div className="m-card-title">{label} <span>{list.length}</span></div>
+        {list.map((ev) => (
+          <button key={ev.id} className="m-event-row" style={{ "--ev": ev.color || EVENT_COLORS[0] }} onClick={() => setMobileEventEdit({ ...ev, end: ev.end || ev.start })}>
+            <span className="m-event-bar" />
+            <span className="m-event-text">
+              <span className="m-event-title">{ev.title}</span>
+              <span className="m-event-span">{eventSpanLabel(ev)}</span>
+            </span>
+            <span className="m-event-when">{eventWhenLabel(ev)}</span>
+          </button>
+        ))}
+      </div>
+    );
+    return (
+      <div className="m-screen" style={{ "--chip": "#A78BFA" }} {...mobileSwipeHandlers(true)}>
+        {renderMobileBrandBar()}
+        <div className="m-topbar">
+          <div className="m-toolbar">
+            <button className="m-pill" onClick={mobileGoBack} title="Volver"><ChevronLeft size={20} /></button>
+            <div className="m-header-title"><CalendarRange size={15} />EVENTOS</div>
+            <button className="m-add-btn" onClick={() => setMobileEventEdit({ id: null, title: "", start: todayISO(), end: todayISO(), color: EVENT_COLORS[events.length % EVENT_COLORS.length], note: "" })} title="Nuevo evento"><Plus size={20} strokeWidth={2.6} /></button>
+          </div>
+        </div>
+        <div className="m-list">
+          {events.length === 0 && <div className="m-empty-hint">Todavía no hay eventos. Tocá + para crear uno (vacaciones, un viaje, lo que dure uno o varios días).</div>}
+          {section("En curso", g.now)}
+          {section("Próximos", g.next)}
+          {section("Pasados", g.past.slice(0, 20))}
+        </div>
+        {renderMobileUrgentBar()}
+      </div>
+    );
+  }
+
+  function saveMobileEvent() {
+    const ed = mobileEventEdit;
+    if (!ed || !ed.start) return;
+    let start = ed.start, end = ed.end || ed.start;
+    if (end < start) [start, end] = [end, start];
+    const title = (ed.title || "").trim() || "Evento";
+    if (ed.id) setEvents((prev) => prev.map((ev) => (ev.id === ed.id ? { ...ev, title, start, end, color: ed.color, note: ed.note || "", updatedAt: Date.now() } : ev)));
+    else setEvents((prev) => [...prev, { id: uid(), title, start, end, color: ed.color || EVENT_COLORS[0], note: ed.note || "", createdAt: Date.now() }]);
+    setMobileEventEdit(null);
+    showToast(ed.id ? "Evento guardado" : "Evento creado");
+  }
+
+  function saveMobileNote() {
+    const ed = mobileNoteEdit;
+    if (!ed) return;
+    const title = (ed.title || "").trim();
+    const body = ed.body || "";
+    if (!title && !body.trim()) { setMobileNoteEdit(null); return; }
+    if (ed.id) updateNote(ed.id, { title, body });
+    else setNotes((prev) => [{ id: uid(), title, body, areaId: null, projectId: null, createdAt: Date.now() }, ...prev]);
+    setMobileNoteEdit(null);
+    showToast(ed.id ? "Nota guardada" : "Nota creada");
+  }
+
+  function renderMobileSheets() {
+    if (mobileEventEdit) {
+      const ed = mobileEventEdit;
+      const set = (patch) => setMobileEventEdit((x) => ({ ...x, ...patch }));
+      const days = ed.start && ed.end ? Math.abs(isoDiff(ed.start, ed.end)) + 1 : 1;
+      return (
+        <div className="modal-overlay" onClick={() => setMobileEventEdit(null)}>
+          <div className="modal-card m-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">{ed.id ? "Evento" : "Nuevo evento"} <span className="m-sheet-sub">{days} {days === 1 ? "día" : "días"}</span></div>
+            <input className="settings-input m-sheet-input" placeholder="Vacaciones, viaje, congreso…" value={ed.title} onChange={(e) => set({ title: e.target.value })} autoFocus={!ed.id} />
+            <div className="m-sheet-dates">
+              <label>Desde<input type="date" className="settings-input m-sheet-input" value={ed.start || ""} onChange={(e) => e.target.value && set({ start: e.target.value, end: ed.end && ed.end < e.target.value ? e.target.value : ed.end })} /></label>
+              <label>Hasta<input type="date" className="settings-input m-sheet-input" value={ed.end || ""} min={ed.start} onChange={(e) => e.target.value && set({ end: e.target.value < ed.start ? ed.start : e.target.value })} /></label>
+            </div>
+            <div className="ev-swatches m-sheet-swatches">
+              {EVENT_COLORS.map((c) => (
+                <button key={c} className={`ev-swatch ${ed.color === c ? "ev-swatch--on" : ""}`} style={{ background: c }} onClick={() => set({ color: c })} />
+              ))}
+            </div>
+            <textarea className="settings-input m-sheet-input" rows={2} placeholder="Nota (opcional)" value={ed.note || ""} onChange={(e) => set({ note: e.target.value })} />
+            <div className="modal-actions">
+              {ed.id && <button className="modal-btn modal-btn--cancel m-sheet-danger" onClick={() => deleteEvent(ed.id)}><Trash2 size={14} /></button>}
+              <span style={{ flex: 1 }} />
+              <button className="modal-btn modal-btn--cancel" onClick={() => setMobileEventEdit(null)}>Cancelar</button>
+              <button className="modal-btn modal-btn--primary" onClick={saveMobileEvent}>{ed.id ? "Guardar" : "Crear"}</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (mobileNoteEdit) {
+      const ed = mobileNoteEdit;
+      const set = (patch) => setMobileNoteEdit((x) => ({ ...x, ...patch }));
+      return (
+        <div className="modal-overlay" onClick={saveMobileNote}>
+          <div className="modal-card m-sheet" onClick={(e) => e.stopPropagation()}>
+            <input className="m-sheet-note-title" placeholder="Título" value={ed.title} onChange={(e) => set({ title: e.target.value })} autoFocus={!ed.id} />
+            <textarea className="settings-input m-sheet-input m-sheet-note-body" rows={6} placeholder="Escribí algo…" value={ed.body} onChange={(e) => set({ body: e.target.value })} />
+            <div className="modal-actions">
+              {ed.id && <button className="modal-btn modal-btn--cancel m-sheet-danger" onClick={() => deleteNote(ed.id)}><Trash2 size={14} /></button>}
+              {ed.id && <button className="modal-btn modal-btn--cancel" onClick={() => noteToTask(ed.id)}><Undo2 size={14} /> A tareas</button>}
+              <span style={{ flex: 1 }} />
+              <button className="modal-btn modal-btn--primary" onClick={saveMobileNote}>Listo</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
   }
 
   // ================= CALENDAR =================
@@ -3162,6 +4006,7 @@ export default function TaskApp() {
           {labels.map((w) => <span key={w} className="mini-wd">{w.slice(0, 1)}</span>)}
           {monthGrid.map((cell) => {
             const has = (tasksByDate[cell.iso] || []).some((t) => t.status !== "Hecho");
+            const evOn = eventsOn(cell.iso);
             return (
               <button
                 key={cell.iso}
@@ -3170,6 +4015,7 @@ export default function TaskApp() {
               >
                 {cell.day}
                 {has && <span className="mini-dot" />}
+                {evOn.length > 0 && <span className="mini-ev" style={{ background: evOn[0].color || EVENT_COLORS[0] }} />}
               </button>
             );
           })}
@@ -3195,6 +4041,22 @@ export default function TaskApp() {
               </div>
               <span className="cal-side-count">{dayTasks.filter((t) => t.status !== "Hecho").length}</span>
             </div>
+            {eventsOn(selectedDay).length > 0 && (
+              <div className="cal-side-events">
+                {eventsOn(selectedDay).map((ev) => (
+                  <button
+                    key={ev.id}
+                    className="ev-row ev-row--small"
+                    style={{ "--ev": ev.color || EVENT_COLORS[0] }}
+                    onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); openEventEditor({ ...ev, end: ev.end || ev.start }, r.left - 330, r.top); }}
+                  >
+                    <span className="ev-row-bar" />
+                    <span className="ev-row-title">{ev.title}</span>
+                    {(ev.end || ev.start) !== ev.start && <span className="ev-row-meta">hasta {fmtDate(ev.end)}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="cal-side-add">
               <Plus size={14} />
               <input
@@ -3250,7 +4112,15 @@ export default function TaskApp() {
               <span>{longDateLabel(calPopover.id)}</span>
               <button className="cal-pop-close" onClick={() => setCalPopover(null)}><X size={14} /></button>
             </div>
-            <div className="cal-pop-day-list">{list.map((t) => renderCalChip(t, { wrap: true }))}</div>
+            <div className="cal-pop-day-list">
+              {eventsOn(calPopover.id).map((ev) => (
+                <button key={ev.id} className="ev-row ev-row--small" style={{ "--ev": ev.color || EVENT_COLORS[0] }}
+                  onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); openEventEditor({ ...ev, end: ev.end || ev.start }, r.left, r.bottom); }}>
+                  <span className="ev-row-bar" /><span className="ev-row-title">{ev.title}</span>
+                </button>
+              ))}
+              {list.map((t) => renderCalChip(t, { wrap: true }))}
+            </div>
           </div>
         </>,
         document.body
@@ -3323,10 +4193,14 @@ export default function TaskApp() {
     } else title = longDateLabel(selectedDay);
 
     const dayCellHandlers = (iso) => ({
+      "data-cal-iso": iso,
       onClick: () => { focusDay(iso); setCalPopover(null); },
-      onDoubleClick: (e) => { if (e.target.closest(".cal-chip")) return; focusDay(iso); setCalAddDay(iso); setCalAddText(""); },
+      onDoubleClick: (e) => { if (e.target.closest(".cal-chip, .cal-ev")) return; focusDay(iso); setCalAddDay(iso); setCalAddText(""); },
+      onMouseDown: (e) => eventSelectStart(e, iso),
+      onMouseEnter: () => { if (eventDraft) eventSelectEnter(iso); },
       ...calDropProps(iso),
     });
+    const MAX_LANES = 3;
 
     return (
       <div className="calendar-wrap">
@@ -3368,6 +4242,13 @@ export default function TaskApp() {
               <button className="cal-nav-btn" onClick={() => goPrevNext(1)} title="Siguiente (AvPág)"><ChevronRight size={16} /></button>
             </div>
             <div className="cal-toolbar-spacer" />
+            <button
+              className="cal-new-event"
+              onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); openEventEditor({ start: selectedDay, end: selectedDay }, r.left - 120, r.bottom); }}
+              title="Nuevo evento (también podés arrastrar sobre los días)"
+            >
+              <Plus size={14} /> Evento
+            </button>
             <div className="cal-view-switch" role="tablist">
               {[["mes", "Mes", "M"], ["semana", "Semana", "S"], ["dia", "Día", "D"]].map(([k, label, key]) => (
                 <button key={k} role="tab" aria-selected={calView === k} className={`seg-btn ${calView === k ? "seg-btn--active" : ""}`} onClick={() => switchCalView(k)} title={`${label} (${key})`}>{label}</button>
@@ -3380,36 +4261,48 @@ export default function TaskApp() {
               <div className="cal-month-head">
                 {labels.map((w, i) => <div key={w} className={`cal-weekday ${isWeekendIdx(i) ? "cal-weekday--weekend" : ""}`}>{w}</div>)}
               </div>
-              <div className="cal-month-body">
-                {monthGrid.map((cell, idx) => {
-                  const dayTasks = tasksByDate[cell.iso] || [];
-                  const isToday = cell.iso === today;
-                  const isSelected = cell.iso === selectedDay;
-                  const holidayName = isHoliday(cell.iso, holidayCountry);
-                  const cap = maxChips - (holidayName ? 1 : 0);
-                  const shown = dayTasks.length > cap ? dayTasks.slice(0, cap - 1) : dayTasks;
-                  const hidden = dayTasks.length - shown.length;
+              <div className={`cal-month-body ${eventDraft ? "cal-month-body--selecting" : ""}`}>
+                {Array.from({ length: weeks }, (_, wi) => monthGrid.slice(wi * 7, wi * 7 + 7)).map((week, wi) => {
+                  const { segs, lanes } = layoutEvents(week.map((c) => c.iso));
+                  const shownLanes = Math.min(lanes, MAX_LANES);
                   return (
-                    <div
-                      key={cell.iso}
-                      className={`cal-cell ${!cell.inMonth ? "cal-cell--out" : ""} ${isWeekendIdx(idx % 7) ? "cal-cell--weekend" : ""} ${isToday ? "cal-cell--today" : ""} ${isSelected ? "cal-cell--selected" : ""} ${holidayName ? "cal-cell--holiday" : ""} ${calDropTarget === cell.iso ? "cal-cell--drop" : ""} ${cell.iso < today && cell.inMonth ? "cal-cell--past" : ""}`}
-                      {...dayCellHandlers(cell.iso)}
-                    >
-                      <div className="cal-cell-head">
-                        <span className="cal-cell-num">{cell.day === 1 && !cell.inMonth ? `${cell.day} ${MONTH_ABBR[Number(cell.iso.slice(5, 7)) - 1].toLowerCase()}` : cell.day}</span>
-                        <button
-                          className="cal-cell-add"
-                          title="Agregar tarea"
-                          onClick={(e) => { e.stopPropagation(); focusDay(cell.iso); setCalAddDay(cell.iso); setCalAddText(""); }}
-                        ><Plus size={13} /></button>
-                      </div>
-                      {holidayName && <div className="cal-cell-holiday" title={holidayName}>{holidayName}</div>}
-                      <div className="cal-cell-tasks">
-                        {shown.map((t) => renderCalChip(t))}
-                        {hidden > 0 && (
-                          <button className="cal-more" onClick={(e) => openCalDayPopover(e, cell.iso)}>{hidden} más</button>
-                        )}
-                        {renderCalInlineAdd(cell.iso)}
+                    <div className="cal-mweek" key={week[0].iso} style={{ "--lanes": shownLanes }}>
+                      {week.map((cell, ci) => {
+                        const dayTasks = tasksByDate[cell.iso] || [];
+                        const isToday = cell.iso === today;
+                        const isSelected = cell.iso === selectedDay;
+                        const holidayName = isHoliday(cell.iso, holidayCountry);
+                        const hiddenEvents = segs.filter((sg) => sg.lane >= MAX_LANES && sg.col <= ci && sg.col + sg.span - 1 >= ci).length;
+                        const cap = Math.max(1, maxChips - shownLanes - (holidayName ? 1 : 0));
+                        const shown = dayTasks.length > cap ? dayTasks.slice(0, Math.max(0, cap - 1)) : dayTasks;
+                        const hidden = dayTasks.length - shown.length + hiddenEvents;
+                        return (
+                          <div
+                            key={cell.iso}
+                            className={`cal-cell ${!cell.inMonth ? "cal-cell--out" : ""} ${isWeekendIdx(ci) ? "cal-cell--weekend" : ""} ${isToday ? "cal-cell--today" : ""} ${isSelected ? "cal-cell--selected" : ""} ${holidayName ? "cal-cell--holiday" : ""} ${calDropTarget === cell.iso ? "cal-cell--drop" : ""} ${cell.iso < today && cell.inMonth ? "cal-cell--past" : ""} ${inDraft(cell.iso) ? "cal-cell--range" : ""}`}
+                            {...dayCellHandlers(cell.iso)}
+                          >
+                            <div className="cal-cell-head">
+                              <span className="cal-cell-num">{cell.day === 1 && !cell.inMonth ? `${cell.day} ${MONTH_ABBR[Number(cell.iso.slice(5, 7)) - 1].toLowerCase()}` : cell.day}</span>
+                              <button
+                                className="cal-cell-add"
+                                title="Agregar tarea"
+                                onClick={(e) => { e.stopPropagation(); focusDay(cell.iso); setCalAddDay(cell.iso); setCalAddText(""); }}
+                              ><Plus size={13} /></button>
+                            </div>
+                            {holidayName && <div className="cal-cell-holiday" title={holidayName}>{holidayName}</div>}
+                            <div className="cal-cell-tasks">
+                              {shown.map((t) => renderCalChip(t))}
+                              {hidden > 0 && (
+                                <button className="cal-more" onClick={(e) => openCalDayPopover(e, cell.iso)}>{hidden} más</button>
+                              )}
+                              {renderCalInlineAdd(cell.iso)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="cal-ev-layer">
+                        {segs.filter((sg) => sg.lane < MAX_LANES).map((sg) => renderEventBar(sg, { rowHeight: 22 }))}
                       </div>
                     </div>
                   );
@@ -3418,8 +4311,11 @@ export default function TaskApp() {
             </div>
           )}
 
-          {calView === "semana" && (
-            <div className="cal-week">
+          {calView === "semana" && (() => {
+            const { segs, lanes } = layoutEvents(weekDays.map((d) => d.iso));
+            const bandH = lanes ? lanes * 26 + 6 : 0;
+            return (
+            <div className={`cal-week ${eventDraft ? "cal-week--selecting" : ""}`} style={{ "--evband": `${bandH}px` }}>
               {weekDays.map((d, i) => {
                 const dayTasks = tasksByDate[d.iso] || [];
                 const isToday = d.iso === today;
@@ -3427,14 +4323,15 @@ export default function TaskApp() {
                 return (
                   <div
                     key={d.iso}
-                    className={`cal-week-col ${isWeekendIdx(i) ? "cal-cell--weekend" : ""} ${isToday ? "cal-cell--today" : ""} ${d.iso === selectedDay ? "cal-cell--selected" : ""} ${calDropTarget === d.iso ? "cal-cell--drop" : ""} ${d.iso < today ? "cal-cell--past" : ""}`}
+                    className={`cal-week-col ${isWeekendIdx(i) ? "cal-cell--weekend" : ""} ${isToday ? "cal-cell--today" : ""} ${d.iso === selectedDay ? "cal-cell--selected" : ""} ${calDropTarget === d.iso ? "cal-cell--drop" : ""} ${d.iso < today ? "cal-cell--past" : ""} ${inDraft(d.iso) ? "cal-cell--range" : ""}`}
                     {...dayCellHandlers(d.iso)}
                   >
                     <div className="cal-week-head">
                       <span className="cal-week-wd">{labels[i]}</span>
                       <span className="cal-week-num">{d.day}</span>
+                      {holidayName && <span className="cal-week-holiday" title={holidayName}>{holidayName}</span>}
                     </div>
-                    {holidayName && <div className="cal-week-holiday">{holidayName}</div>}
+                    <div className="cal-week-evspace" />
                     <div className="cal-week-tasks">
                       {dayTasks.map((t) => renderCalChip(t, { wrap: true }))}
                       {renderCalInlineAdd(d.iso)}
@@ -3447,8 +4344,12 @@ export default function TaskApp() {
                   </div>
                 );
               })}
+              <div className="cal-ev-layer cal-ev-layer--week">
+                {segs.map((sg) => renderEventBar(sg, { rowHeight: 26 }))}
+              </div>
             </div>
-          )}
+            );
+          })()}
 
           {calView === "dia" && (() => {
             const dayTasks = tasksByDate[selectedDay] || [];
@@ -3471,6 +4372,26 @@ export default function TaskApp() {
                   <span style={{ flex: 1 }} />
                   <span className="cal-day-hero-count">{pending.length} {pending.length === 1 ? "pendiente" : "pendientes"}</span>
                 </div>
+                {eventsOn(selectedDay).length > 0 && (
+                  <div className="cal-day-events">
+                    {eventsOn(selectedDay).map((ev) => {
+                      const total = isoDiff(ev.start, ev.end || ev.start) + 1;
+                      const nth = isoDiff(ev.start, selectedDay) + 1;
+                      return (
+                        <button
+                          key={ev.id}
+                          className="ev-row"
+                          style={{ "--ev": ev.color || EVENT_COLORS[0] }}
+                          onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); openEventEditor({ ...ev, end: ev.end || ev.start }, r.left, r.bottom); }}
+                        >
+                          <span className="ev-row-bar" />
+                          <span className="ev-row-title">{ev.title}</span>
+                          <span className="ev-row-meta">{total > 1 ? `Día ${nth} de ${total} · ${eventSpanLabel(ev)}` : "Todo el día"}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="cal-day-add">
                   <Plus size={16} />
                   <input
@@ -3509,11 +4430,12 @@ export default function TaskApp() {
           })()}
 
           <div className="cal-footer-hint">
-            Doble clic en un día para agregar · arrastrá tareas para cambiarles la fecha · flechas para moverte, T para hoy
+            Arrastrá sobre varios días para crear un evento · doble clic para una tarea · arrastrá tareas y eventos para moverlos · T para hoy
           </div>
         </div>
         {renderCalSidePanel()}
         {renderCalPopover()}
+        {renderEventEditor()}
       </div>
     );
   }
@@ -3544,7 +4466,7 @@ export default function TaskApp() {
                 key={t.id}
                 draggable={editingTitleId !== t.id && editingNoteId !== t.id}
                 className={`${draggedTaskId === t.id ? "row-dragging" : ""} ${dragOverKey === `task:${t.id}` ? "row-drag-over" : ""}`}
-                onDragStart={(e) => { setDraggedTaskId(t.id); e.dataTransfer.effectAllowed = "move"; }}
+                onDragStart={(e) => { setDraggedTaskId(t.id); e.dataTransfer.setData("text/plain", t.id); e.dataTransfer.effectAllowed = "move"; }}
                 onDragEnd={() => { setDraggedTaskId(null); setDragOverKey(null); }}
                 onDragOver={(e) => { if (draggedTaskId && draggedTaskId !== t.id) { e.preventDefault(); e.stopPropagation(); setDragOverKey(`task:${t.id}`); } }}
                 onDrop={(e) => { e.preventDefault(); e.stopPropagation(); reorderTask(draggedTaskId, t.id); }}
@@ -3925,9 +4847,9 @@ export default function TaskApp() {
         .notif-panel-count { color: var(--text-faint); font-weight: 400; }
         .notif-panel-list { overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
         .notif-panel-empty { padding: 16px; text-align: center; font-size: 13px; color: var(--text-faint); }
-        .notif-row { display: flex; flex-direction: column; gap: 3px; padding: 8px 8px; border-radius: 7px; }
+        .notif-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 8px; border-radius: 7px; background: none; border: none; text-align: left; color: inherit; font: inherit; cursor: pointer; width: 100%; }
         .notif-row:hover { background: var(--surface); }
-        .notif-row-title { font-size: 13.5px; color: var(--text); }
+        .notif-row-title { font-size: 13.5px; color: var(--text); display: flex; align-items: center; gap: 6px; }
         .notif-row-meta { font-size: 12px; color: var(--text-faint); }
 
         /* ---- input card ---- */
@@ -4094,21 +5016,33 @@ export default function TaskApp() {
         /* ---- urgent ticker bar ---- */
         .urgent-bar {
           flex-shrink: 0; height: 46px; border-top: 1px solid var(--border); background: var(--side);
-          display: flex; align-items: center; gap: 12px; padding: 0 20px;
+          display: flex; align-items: center; gap: 10px; padding: 0 20px; overflow: hidden; position: relative; z-index: 20;
         }
+        .urgent-bar--tappable { cursor: pointer; }
+        .urgent-bar--tappable:hover { background: color-mix(in srgb, var(--side) 85%, var(--amber) 4%); }
         .urgent-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; color: var(--alta); flex-shrink: 0; }
         .urgent-label--off { color: var(--text-faint); }
-        .urgent-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--alta); }
-        .urgent-dot--off { background: var(--text-faint); }
-        .urgent-empty { font-size: 13px; color: var(--text-faint); }
-        .urgent-chip { font-size: 11.5px; font-weight: 650; padding: 3px 9px; border-radius: 999px; flex-shrink: 0; }
+        .urgent-label--info { color: var(--blue); }
+        .urgent-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--alta); box-shadow: 0 0 8px -1px var(--alta); animation: tt-alert-pulse 2s ease-in-out infinite; }
+        .urgent-dot--off { background: var(--text-faint); animation: none; box-shadow: none; }
+        .urgent-label--info .urgent-dot--off { background: var(--blue); box-shadow: 0 0 8px -1px var(--blue); }
+        @keyframes tt-alert-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+        .urgent-item { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; animation: tt-alert-in .35s ease-out; }
+        @keyframes tt-alert-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .urgent-empty { font-size: 13px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .urgent-chip { font-size: 11.5px; font-weight: 650; padding: 3px 9px; border-radius: 999px; flex-shrink: 0; white-space: nowrap; }
         .urgent-chip--vencida { background: rgba(242,95,85,0.16); color: var(--alta); }
         .urgent-chip--hoy { background: rgba(242,171,67,0.16); color: var(--amber); }
-        .urgent-chip--manana { background: rgba(91,151,255,0.16); color: var(--blue); }
-        .urgent-title { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .urgent-meta { font-size: 12.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .urgent-spacer { flex: 1; }
-        .urgent-count { font-size: 12px; color: var(--text-faint); flex-shrink: 0; }
+        .urgent-chip--manana, .urgent-chip--pronto { background: rgba(91,151,255,0.16); color: var(--blue); }
+        .urgent-chip--evento, .urgent-chip--eventoPronto { background: rgba(167,139,250,0.16); color: #b9a4fb; }
+        .urgent-swatch { display: inline-block; width: 8px; height: 8px; border-radius: 3px; flex-shrink: 0; }
+        .urgent-title { font-size: 13.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 0; }
+        .urgent-meta { font-size: 12.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 2; }
+        .urgent-nav { display: flex; align-items: center; gap: 2px; flex-shrink: 0; margin-left: auto; }
+        .urgent-nav button { border: 0; background: transparent; color: var(--text-faint); width: 24px; height: 24px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .urgent-nav button:hover { color: var(--text); background: var(--surface-2); }
+        .urgent-count { font-size: 11.5px; color: var(--text-faint); min-width: 30px; text-align: center; font-variant-numeric: tabular-nums; }
+        @media (prefers-reduced-motion: reduce) { .urgent-item, .urgent-dot { animation: none; } }
 
         /* ---- calendar ---- */
         .calendar-wrap { flex: 1; min-height: 0; display: flex; }
@@ -4152,17 +5086,21 @@ export default function TaskApp() {
         .cal-month-head { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--border); }
         .cal-weekday { padding: 9px 12px; font-size: 12px; font-weight: 600; color: var(--text-dim); }
         .cal-weekday--weekend { color: var(--text-faint); }
-        .cal-month-body {
-          flex: 1; min-height: 0; overflow-y: auto; display: grid;
-          grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(var(--weeks), minmax(96px, 1fr));
+        .cal-month-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+        .cal-month-body--selecting, .cal-week--selecting { cursor: copy; -webkit-user-select: none; user-select: none; }
+        .cal-mweek {
+          position: relative; flex: 1 0 auto; min-height: calc(96px + var(--lanes, 0) * 22px);
+          display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--border);
         }
+        .cal-mweek:last-child { border-bottom: none; }
         .cal-cell {
           position: relative; min-width: 0; min-height: 0; overflow: hidden; padding: 6px 6px 6px;
-          display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+          display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--border);
           transition: background .12s, box-shadow .12s;
         }
-        .cal-cell:nth-child(7n) { border-right: none; }
-        .cal-cell:nth-last-child(-n+7) { border-bottom: none; }
+        .cal-mweek > .cal-cell:nth-child(7) { border-right: none; }
+        .cal-mweek .cal-cell-head { margin-bottom: calc(var(--lanes, 0) * 22px + 1px); }
+        .cal-cell--range, .cal-week-col.cal-cell--range { background: color-mix(in srgb, #A78BFA 14%, transparent); box-shadow: inset 0 0 0 1px rgba(167,139,250,0.35); }
         .cal-cell--weekend { background: var(--weekend); }
         .cal-cell--selected { background: rgba(242,171,67,0.045); box-shadow: inset 0 0 0 1.5px var(--amber-line); }
         .cal-cell--drop, .cal-week-col.cal-cell--drop { background: var(--amber-soft); box-shadow: inset 0 0 0 2px var(--amber); }
@@ -4216,7 +5154,9 @@ export default function TaskApp() {
         .cal-week { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
         .cal-week-col { min-width: 0; min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border); transition: background .12s, box-shadow .12s; }
         .cal-week-col:last-child { border-right: none; }
-        .cal-week-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 12px 10px; border-bottom: 1px solid var(--border); }
+        .cal-week { position: relative; }
+        .cal-week-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 12px 0; height: 88px; flex-shrink: 0; border-bottom: 1px solid var(--border); overflow: hidden; }
+        .cal-week-evspace { height: var(--evband, 0px); flex-shrink: 0; }
         .cal-week-wd { font-size: 12px; font-weight: 600; color: var(--text-dim); }
         .cal-week-num {
           height: 38px; min-width: 38px; margin-left: -6px; padding: 0 6px; border-radius: 999px;
@@ -4225,7 +5165,7 @@ export default function TaskApp() {
         }
         .cal-cell--past .cal-week-num { color: var(--text-faint); }
         .cal-cell--today .cal-week-num { background: var(--amber); color: #1b1304; }
-        .cal-week-holiday { font-size: 11.5px; color: var(--alta); padding: 8px 12px 0; }
+        .cal-week-holiday { font-size: 11px; color: var(--alta); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .cal-week-tasks { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 5px; }
         .cal-week-add {
           display: flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; color: var(--text-faint);
@@ -4284,6 +5224,62 @@ export default function TaskApp() {
         .agenda-date--overdue { color: var(--alta); }
         .agenda-flag { color: var(--alta); flex-shrink: 0; }
         .agenda-doing { color: var(--blue); flex-shrink: 0; }
+
+        /* events (multi-día) */
+        .cal-new-event {
+          display: flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px; border-radius: 10px; cursor: pointer;
+          background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.35); color: #c9b8ff; font: inherit; font-size: 12.5px; font-weight: 600;
+        }
+        .cal-new-event:hover { background: rgba(167,139,250,0.2); color: #e2d8ff; }
+        .cal-ev-layer { position: absolute; left: 0; right: 0; top: 36px; height: 0; pointer-events: none; z-index: 3; }
+        .cal-ev-layer--week { top: 92px; }
+        .cal-ev {
+          position: absolute; height: 20px; display: flex; align-items: center; pointer-events: auto; cursor: pointer;
+          background: color-mix(in srgb, var(--ev) 30%, var(--surface)); border-radius: 6px;
+          box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ev) 45%, transparent);
+          color: #f4f1ff; font-size: 11.5px; font-weight: 600; transition: filter .12s, opacity .12s;
+        }
+        .cal-ev-layer--week .cal-ev { height: 22px; font-size: 12px; }
+        .cal-ev::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 6px 0 0 6px; background: var(--ev); }
+        .cal-ev--cont-left { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+        .cal-ev--cont-left::before { display: none; }
+        .cal-ev--cont-right { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+        .cal-ev:hover { filter: brightness(1.15); }
+        .cal-ev--dragging { opacity: 0.4; }
+        .cal-ev--open { box-shadow: inset 0 0 0 1.5px var(--ev), 0 0 0 1px var(--ev); }
+        .cal-ev-title { flex: 1; min-width: 0; padding: 0 8px 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cal-ev-handle { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; z-index: 1; }
+        .cal-ev-handle--start { left: -2px; }
+        .cal-ev-handle--end { right: -2px; }
+        .cal-ev-handle::after { content: ""; position: absolute; top: 5px; bottom: 5px; left: 3px; width: 2px; border-radius: 2px; background: rgba(255,255,255,0.55); opacity: 0; transition: opacity .12s; }
+        .cal-ev:hover .cal-ev-handle::after { opacity: 1; }
+        .cal-pop-title--input { margin-bottom: 2px; }
+        .ev-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+        .ev-swatch { width: 18px; height: 18px; border-radius: 6px; border: none; cursor: pointer; padding: 0; opacity: 0.8; }
+        .ev-swatch:hover { opacity: 1; }
+        .ev-swatch--on { opacity: 1; box-shadow: 0 0 0 2px var(--surface-2), 0 0 0 3.5px currentColor; color: #fff; }
+        .ev-note {
+          width: 100%; margin-top: 10px; resize: vertical; min-height: 40px; background: var(--bg); border: 1px solid var(--border);
+          border-radius: 8px; color: var(--text); font: inherit; font-size: 13px; padding: 7px 9px; outline: none;
+        }
+        .ev-note:focus { border-color: var(--amber-line); }
+        .cal-pop .cal-pop-btn--primary { background: var(--amber); color: #1b1304; font-weight: 650; }
+        .cal-pop .cal-pop-btn--primary:hover { background: var(--amber); color: #1b1304; filter: brightness(1.08); }
+        .ev-row {
+          display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer; font: inherit; color: var(--text);
+          padding: 10px 12px 10px 0; border: none; border-radius: 10px; overflow: hidden;
+          background: color-mix(in srgb, var(--ev) 13%, var(--surface-2));
+        }
+        .ev-row:hover { background: color-mix(in srgb, var(--ev) 20%, var(--surface-2)); }
+        .ev-row-bar { width: 4px; align-self: stretch; background: var(--ev); flex-shrink: 0; }
+        .ev-row-title { font-size: 14px; font-weight: 600; flex-shrink: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ev-row-meta { font-size: 12px; color: var(--text-dim); margin-left: auto; white-space: nowrap; flex-shrink: 0; }
+        .ev-row--small { padding: 7px 10px 7px 0; gap: 8px; border-radius: 8px; }
+        .ev-row--small .ev-row-title { font-size: 12.5px; }
+        .ev-row--small .ev-row-meta { font-size: 11px; }
+        .cal-day-events { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+        .cal-side-events { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+        .mini-ev { position: absolute; left: 9px; right: 9px; bottom: 1px; height: 2px; border-radius: 2px; opacity: 0.65; }
 
         /* side panel */
         .cal-side {
@@ -4369,6 +5365,68 @@ export default function TaskApp() {
           .cal-pop { animation: none; }
         }
 
+        /* ---- notas ---- */
+        .side-item--droppable { outline: 1.5px dashed var(--amber-line); outline-offset: -2px; color: var(--text); }
+        .side-item--dropping { background: var(--amber-soft); outline: 1.5px solid var(--amber); }
+        .side-drop-hint { font-size: 11.5px; font-weight: 600; color: var(--amber); }
+        .notes-wrap, .events-wrap { flex: 1; overflow-y: auto; width: calc(100% - 40px); max-width: 1320px; margin: 0 auto; padding: 18px 0 30px; border-radius: var(--radius-lg); transition: box-shadow .12s, background .12s; }
+        .notes-wrap--drop { box-shadow: inset 0 0 0 2px var(--amber); background: rgba(242,171,67,0.04); }
+        .notes-new {
+          display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 48px; margin-bottom: 10px;
+          background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); color: var(--text-faint);
+        }
+        .notes-new:focus-within { border-color: var(--amber-line); }
+        .notes-new input { flex: 1; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 14.5px; }
+        .notes-new input::placeholder { color: var(--text-faint); }
+        .notes-hint { font-size: 12.5px; color: var(--text-faint); margin: 0 4px 18px; }
+        .notes-hint b { color: var(--text-dim); font-weight: 600; }
+        .notes-empty { padding: 50px 20px; text-align: center; color: var(--text-faint); font-size: 14px; }
+        .notes-grid { columns: 3 300px; column-gap: 14px; }
+        .note-card {
+          break-inside: avoid; margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px;
+          background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px 10px;
+          box-shadow: inset 3px 0 0 var(--chip);
+        }
+        .note-card:focus-within { border-color: var(--border-strong); }
+        .note-title { background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 15px; font-weight: 650; padding: 0; width: 100%; }
+        .note-title::placeholder { color: var(--text-faint); }
+        .note-body {
+          background: none; border: none; outline: none; resize: none; overflow: hidden; color: var(--text-dim);
+          font: inherit; font-size: 13.5px; line-height: 1.5; padding: 0; width: 100%; min-height: 22px;
+        }
+        .note-body:focus { color: var(--text); }
+        .note-body::placeholder { color: var(--text-faint); }
+        .note-foot { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--border); min-width: 0; }
+        .note-place { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-dim); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .note-place-dot { flex-shrink: 0; }
+        .note-place-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--chip); }
+        .note-date { font-size: 11.5px; color: var(--text-faint); white-space: nowrap; flex-shrink: 0; }
+        .note-act {
+          display: inline-flex; align-items: center; gap: 5px; border: none; background: none; color: var(--text-faint);
+          font: inherit; font-size: 12px; padding: 5px 7px; border-radius: 7px; cursor: pointer; flex-shrink: 0;
+        }
+        .note-act:hover { background: var(--surface-2); color: var(--text); }
+        .note-act--danger:hover { color: var(--alta); background: rgba(242,95,85,0.12); }
+
+        /* ---- eventos (vista) ---- */
+        .events-head { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+        .events-head-text { flex: 1; font-size: 13px; color: var(--text-faint); }
+        .events-section { margin-bottom: 22px; }
+        .events-section-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; color: var(--text-dim); margin: 0 4px 8px; }
+        .events-section-title span { font-size: 11.5px; color: var(--text-faint); background: var(--surface-2); padding: 1px 8px; border-radius: 999px; }
+        .event-card {
+          display: flex; align-items: center; gap: 8px; padding-right: 10px; margin-bottom: 8px; overflow: hidden;
+          background: linear-gradient(90deg, color-mix(in srgb, var(--ev) 12%, transparent), transparent 50%), var(--surface);
+          border: 1px solid var(--border); border-radius: var(--radius-lg);
+        }
+        .event-card--past { opacity: 0.6; }
+        .event-card-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; background: none; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer; padding: 0; }
+        .event-card-bar { width: 4px; align-self: stretch; background: var(--ev); flex-shrink: 0; box-shadow: 0 0 12px -2px var(--ev); }
+        .event-card-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding: 13px 0; }
+        .event-card-title { font-size: 15px; font-weight: 650; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .event-card-span { font-size: 12.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .event-card-when { font-size: 12px; font-weight: 600; color: var(--text-dim); background: var(--surface-2); padding: 4px 10px; border-radius: 999px; flex-shrink: 0; }
+
         /* ---- modal ---- */
         .modal-overlay { position: absolute; inset: 0; background: rgba(6,7,10,0.62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 70; }
         .modal-card { position: relative; width: 340px; background: var(--surface-2); border-radius: 16px; padding: 22px; box-shadow: var(--shadow-pop); }
@@ -4448,12 +5506,10 @@ export default function TaskApp() {
           .m-account-sub { font-size: 11.5px; color: var(--text-faint); }
           .m-account-logout { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text-faint); font-size: 11.5px; padding: 5px 10px; flex-shrink: 0; }
           .urgent-bar {
-            height: 46px; min-height: 46px; max-height: 46px; padding: 0 16px calc(0px + env(safe-area-inset-bottom)); gap: 10px;
-            background: var(--side); border-top: 1px solid var(--border); overflow: hidden; box-sizing: content-box;
+            height: 46px; min-height: 46px; max-height: 46px; padding: 0 12px env(safe-area-inset-bottom); gap: 8px; box-sizing: content-box;
           }
-          .urgent-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 600; }
-          .urgent-empty { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-          .urgent-bar--tappable { cursor: pointer; }
+          .urgent-label { font-size: 0; gap: 0; }
+          .urgent-meta, .urgent-nav button { display: none; }
           .urgent-bar--tappable:active { background: var(--surface); }
 
           /* ---- shell ---- */
@@ -4681,15 +5737,69 @@ export default function TaskApp() {
           .m-quickadd-input-row + .m-list { padding-top: 0; }
           .m-quickadd-item { display: flex; align-items: center; gap: 10px; padding: 14px; font-size: 15px; color: var(--text-dim); border-bottom: 1px solid var(--border); flex-shrink: 0; }
 
+          /* ---- notas / eventos (mobile) ---- */
+          .m-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+          .m-row-tonote {
+            display: flex; align-items: center; gap: 6px; background: var(--amber); color: #1a1200;
+            border: none; border-radius: 8px; padding: 9px 12px; font-size: 13.5px; font-weight: 650;
+          }
+          .m-detail-action {
+            width: 100%; margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; text-align: left;
+            padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+            color: var(--amber); font-size: 15px; font-weight: 650;
+          }
+          .m-detail-action span { flex-basis: 100%; padding-left: 27px; font-size: 12.5px; font-weight: 400; color: var(--text-faint); }
+          .m-special-row { display: flex; gap: 10px; margin-bottom: 12px; flex-shrink: 0; }
+          .m-special-card {
+            flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 12px 12px 12px 14px; color: var(--chip);
+            background: linear-gradient(90deg, color-mix(in srgb, var(--chip) 12%, transparent), transparent 70%), var(--surface);
+            border: 1px solid var(--border); border-left: 3px solid var(--chip); border-radius: 12px;
+          }
+          .m-special-name { flex: 1; text-align: left; font-size: 15px; font-weight: 700; color: var(--text); }
+          .m-note-card {
+            width: 100%; flex-shrink: 0; display: flex; flex-direction: column; gap: 5px; text-align: left; margin-bottom: 10px;
+            padding: 13px 14px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--chip); border-radius: 12px; color: var(--text);
+          }
+          .m-note-title { font-size: 15.5px; font-weight: 650; }
+          .m-note-body { font-size: 14px; color: var(--text-dim); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+          .m-note-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-faint); }
+          .m-note-meta .note-place-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--chip); }
+          .m-event-row {
+            width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 0; text-align: left;
+            background: none; border: none; border-bottom: 1px solid var(--border); color: var(--text);
+          }
+          .m-card > .m-event-row:last-child { border-bottom: none; }
+          .m-event-bar { width: 4px; align-self: stretch; background: var(--ev); border-radius: 0 3px 3px 0; flex-shrink: 0; }
+          .m-event-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+          .m-event-title { font-size: 15.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .m-event-span { font-size: 12.5px; color: var(--text-faint); }
+          .m-event-when { flex-shrink: 0; font-size: 12px; font-weight: 600; color: var(--text-dim); background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 3px 9px; }
+          .m-sheet .modal-title { display: flex; align-items: baseline; gap: 8px; }
+          .m-sheet-sub { font-size: 13px; font-weight: 500; color: var(--text-faint); }
+          .m-sheet-input { font-size: 15px; padding: 11px 12px; font-family: inherit; }
+          .m-sheet-dates { display: flex; gap: 10px; }
+          .m-sheet-dates label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--text-faint); }
+          .m-sheet-dates input { margin-bottom: 8px; color-scheme: dark; }
+          .m-sheet-swatches { margin: 4px 0 12px; gap: 10px; }
+          .m-sheet-swatches .ev-swatch { width: 28px; height: 28px; border-radius: 8px; }
+          .m-sheet-note-title { width: 100%; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 19px; font-weight: 700; padding: 2px 2px 10px; }
+          .m-sheet-note-body { resize: vertical; min-height: 130px; line-height: 1.5; }
+          .m-sheet-danger { color: var(--alta) !important; }
+
           .toast { bottom: calc(120px + env(safe-area-inset-bottom)); }
         }
       `}</style>
 
       {isMobile ? (
-        mobileScreen === "task" ? renderMobileTaskScreen()
+        <>
+        {mobileScreen === "task" ? renderMobileTaskScreen()
         : mobileScreen === "quickadd" ? renderMobileQuickAddScreen()
         : mobileScreen === "area" ? renderMobileAreaScreen()
-        : renderMobileAreasScreen()
+        : mobileScreen === "notes" ? renderMobileNotesScreen()
+        : mobileScreen === "events" ? renderMobileEventsScreen()
+        : renderMobileAreasScreen()}
+        {renderMobileSheets()}
+        </>
       ) : (
       <>
       {/* Sidebar */}
@@ -4706,6 +5816,19 @@ export default function TaskApp() {
         </div>
         <div className={`side-item ${view === "calendario" ? "side-item--active" : ""}`} onClick={() => setView("calendario")}>
           <span className="side-item-left"><CalendarIcon size={14} /> Calendario</span>
+        </div>
+        <div className={`side-item ${view === "eventos" ? "side-item--active" : ""}`} onClick={() => setView("eventos")}>
+          <span className="side-item-left"><CalendarRange size={14} /> Eventos</span>
+          {eventGroups().now.length + eventGroups().next.length > 0 && <span className="side-count mono">{eventGroups().now.length + eventGroups().next.length}</span>}
+        </div>
+        <div
+          className={`side-item side-item--notes ${view === "notas" ? "side-item--active" : ""} ${taskDragActive ? "side-item--droppable" : ""} ${draggingToNotes ? "side-item--dropping" : ""}`}
+          onClick={() => setView("notas")}
+          title="Arrastrá una tarea acá para guardarla como nota"
+          {...notesDropProps()}
+        >
+          <span className="side-item-left"><StickyNote size={14} /> Notas</span>
+          {taskDragActive ? <span className="side-drop-hint">Soltá acá</span> : notes.length > 0 && <span className="side-count mono">{notes.length}</span>}
         </div>
 
         <div className="side-label-row">
@@ -4833,6 +5956,10 @@ export default function TaskApp() {
           <h1>
             {view === "calendario"
               ? "Calendario"
+              : view === "notas"
+              ? "Notas"
+              : view === "eventos"
+              ? "Eventos"
               : view === "prioridad"
                 ? "Por prioridad"
                 : selectedAreaId === "all"
@@ -4872,31 +5999,30 @@ export default function TaskApp() {
               onClick={() => setShowNotifPanel((v) => !v)}
             >
               <Bell size={14} />
-              {urgentItems.length > 0 && <span className="bell-dot" />}
+              {urgentItems.some((i) => i.urgent) && <span className="bell-dot" />}
             </button>
             {showNotifPanel && (
               <>
                 <div className="popover-scrim" onClick={() => setShowNotifPanel(false)} />
                 <div className="notif-panel" onClick={(e) => e.stopPropagation()}>
                   <div className="notif-panel-head">
-                    <span>Urgentes</span>
+                    <span>Alertas</span>
                     <span className="notif-panel-count mono">{urgentItems.length}</span>
                   </div>
                   <div className="notif-panel-list">
                     {urgentItems.length === 0 && (
-                      <div className="notif-panel-empty">Sin tareas vencidas ni próximas.</div>
+                      <div className="notif-panel-empty">Sin vencimientos ni alertas por ahora.</div>
                     )}
-                    {urgentItems.map((item, i) => {
-                      const a = areaMap[item.task.areaId];
-                      const p = item.task.projectId ? a?.projects?.find((pr) => pr.id === item.task.projectId) : null;
-                      return (
-                        <div className="notif-row" key={item.task.id + i}>
-                          <span className={`urgent-chip urgent-chip--${item.kind}`}>{item.label}</span>
-                          <span className="notif-row-title">{item.task.title}</span>
-                          <span className="notif-row-meta">{a?.name}{p ? ` · ${p.name}` : ""}</span>
-                        </div>
-                      );
-                    })}
+                    {urgentItems.map((item) => (
+                      <button className="notif-row" key={item.key} onClick={() => goToAlert(item)}>
+                        <span className={`urgent-chip urgent-chip--${item.kind}`}>{item.chip}</span>
+                        <span className="notif-row-title">
+                          {item.color && <span className="urgent-swatch" style={{ background: item.color }} />}
+                          {item.title}
+                        </span>
+                        {item.meta && <span className="notif-row-meta">{item.meta}</span>}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </>
@@ -5172,6 +6298,10 @@ export default function TaskApp() {
               );
             })}
           </div>
+        ) : view === "notas" ? (
+          renderNotesView()
+        ) : view === "eventos" ? (
+          renderEventsView()
         ) : (
           renderCalendar()
         )}
@@ -5180,32 +6310,7 @@ export default function TaskApp() {
       </div>
       </div>
 
-      {(() => {
-        if (urgentItems.length === 0) {
-          return (
-            <div className="urgent-bar">
-              <span className="urgent-label urgent-label--off"><span className="urgent-dot urgent-dot--off" />URGENTES</span>
-              <span className="urgent-empty">Sin tareas vencidas ni próximas por ahora.</span>
-            </div>
-          );
-        }
-        const current = urgentItems[Math.min(urgentIndex, urgentItems.length - 1)];
-        const project = current.task.projectId
-          ? areaMap[current.task.areaId]?.projects?.find((p) => p.id === current.task.projectId)
-          : null;
-        return (
-          <div className="urgent-bar">
-            <span className="urgent-label"><span className="urgent-dot" />URGENTES</span>
-            <span className={`urgent-chip urgent-chip--${current.kind}`}>{current.label}</span>
-            <span className="urgent-title">{current.task.title}</span>
-            <span className="urgent-meta">
-              {areaMap[current.task.areaId]?.name}{project ? ` · ${project.name}` : ""}
-            </span>
-            <span className="urgent-spacer" />
-            <span className="urgent-count mono">{urgentIndex + 1} / {urgentItems.length}</span>
-          </div>
-        );
-      })()}
+      {renderAlertsBar()}
       </>
       )}
 
@@ -5375,7 +6480,7 @@ export default function TaskApp() {
             ) : (
               <>
                 <div className="modal-text">
-                  ¿Borrar <b style={{ color: "var(--alta)" }}>todas</b> tus áreas, proyectos y tareas? Esta acción no se puede deshacer.
+                  ¿Borrar <b style={{ color: "var(--alta)" }}>todas</b> tus áreas, proyectos, tareas, eventos y notas? Esta acción no se puede deshacer.
                 </div>
                 <div className="modal-actions">
                   <button className="modal-btn modal-btn--cancel" onClick={() => setConfirmingWipe(false)}>Cancelar</button>
