@@ -89,6 +89,334 @@ const MONTH_LABELS = [
 const MONTH_ABBR = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const WEEKDAY_FULL_BY_JSDAY = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
+// ---------- idioma (ESP / ENG, igual que Gastos App) ----------
+// Las frases en español son la clave; EN tiene su traducción. Lo que no está
+// en EN se muestra en español (nunca queda un texto vacío).
+const EN = {
+  "Tarea sin título": "Untitled task",
+  "Ir a esta alerta": "Go to this alert",
+  "Verificando...": "Checking...",
+  "Confirmar y desactivar": "Confirm and turn off",
+  "Activando...": "Turning on...",
+  "Hoy": "Today",
+  "Limpiar": "Clear",
+  "Agregar tarea general (sin proyecto)": "Add general task (no project)",
+  "Agregar tarea": "Add task",
+  "Nueva tarea general": "New general task",
+  "Nueva tarea": "New task",
+  "No se pudo conectar con Supabase": "Couldn't connect to Supabase",
+  "Usá al menos 8 caracteres.": "Use at least 8 characters.",
+  "Las contraseñas no coinciden.": "Passwords don't match.",
+  "El cifrado necesita HTTPS (o localhost). Esta página no cumple ese requisito.": "Encryption requires HTTPS (or localhost). This page doesn't meet that requirement.",
+  "Cifrado activado": "Encryption turned on",
+  "No se pudo activar el cifrado: ": "Couldn't turn on encryption: ",
+  "Ingresá tu contraseña de cifrado.": "Enter your encryption password.",
+  "Contraseña incorrecta.": "Wrong password.",
+  "No se pudo desbloquear: ": "Couldn't unlock: ",
+  "Ingresá tu contraseña de cifrado actual.": "Enter your current encryption password.",
+  "Cifrado desactivado": "Encryption turned off",
+  "No se pudo desactivar: ": "Couldn't turn it off: ",
+  "Se agotó el tiempo de espera — revisá tu conexión a internet.": "The request timed out — check your internet connection.",
+  "Completá email y contraseña.": "Enter your email and password.",
+  "La contraseña necesita al menos 6 caracteres.": "The password needs at least 6 characters.",
+  "Te mandamos un mail para confirmar la cuenta — revisá tu bandeja de entrada.": "We sent you an email to confirm your account — check your inbox.",
+  "No se pudo entrar como invitado — el proyecto necesita tener 'Anonymous sign-ins' activado en Supabase.": "Couldn't sign in as a guest — the project needs 'Anonymous sign-ins' enabled in Supabase.",
+  "Vencida": "Overdue",
+  "venció ayer": "was due yesterday",
+  "venció hace {n} días": "was due {n} days ago",
+  "Mañana": "Tomorrow",
+  "En {n} días": "In {n} days",
+  "Evento": "Event",
+  "{a} al {b}": "{a} to {b}",
+  "Día {n} de {total}": "Day {n} of {total}",
+  "Evento hoy": "Event today",
+  "hasta el {date}": "until {date}",
+  "y {n} más": "and {n} more",
+  "Task App — alertas": "Task App — alerts",
+  "ALERTAS": "ALERTS",
+  "Sin vencimientos ni alertas por ahora.": "No due dates or alerts for now.",
+  "Anterior": "Previous",
+  "Siguiente": "Next",
+  "Backup descargado": "Backup downloaded",
+  "Archivo inválido": "Invalid file",
+  "El archivo no tiene el formato esperado": "The file doesn't have the expected format",
+  "Datos restaurados": "Data restored",
+  "Todo borrado": "Everything deleted",
+  "1 tarea creada": "1 task created",
+  "{n} tareas creadas": "{n} tasks created",
+  "Tarea creada": "Task created",
+  "Área eliminada": "Area deleted",
+  "Proyecto eliminado": "Project deleted",
+  "Tarea eliminada": "Task deleted",
+  "Movida al {date}": "Moved to {date}",
+  "Sin fecha": "No date",
+  "Evento movido al {date}": "Event moved to {date}",
+  "Evento guardado": "Event saved",
+  "Evento creado": "Event created",
+  "Evento eliminado": "Event deleted",
+  "{a} al {b} · {n} días": "{a} to {b} · {n} days",
+  "Nuevo evento": "New event",
+  "1 día": "1 day",
+  "{n} días": "{n} days",
+  "Vacaciones, viaje, congreso…": "Vacation, trip, conference…",
+  "Desde": "From",
+  "Hasta": "To",
+  "Color": "Color",
+  "Nota (opcional)": "Note (optional)",
+  "Eliminar": "Delete",
+  "Cancelar": "Cancel",
+  "Guardar": "Save",
+  "Crear evento": "Create event",
+  "Ver detalle": "View details",
+  "Notas": "Notes",
+  "Buscar": "Search",
+  "Ocultar hechas": "Hide done",
+  "Mostrando solo favoritas — tocá para ocultarlas": "Showing favorites only — tap to hide them",
+  "Ocultando favoritas — tocá para apagar el filtro": "Hiding favorites — tap to turn the filter off",
+  "Filtro de favoritas (apagado)": "Favorites filter (off)",
+  "Nueva nota": "New note",
+  "No se pudo guardar — tocá para reintentar": "Couldn't save — tap to retry",
+  "Configuración": "Settings",
+  "Pendientes": "Pending",
+  "Vencidas": "Overdue",
+  "Sin resultados para \"{q}\"": "No results for \"{q}\"",
+  "No hay nada vencido.": "Nothing is overdue.",
+  "No hay pendientes.": "Nothing pending.",
+  "Eventos": "Events",
+  "Nombre del área": "Area name",
+  "Nueva área": "New area",
+  "Invitado": "Guest",
+  "Sesión de prueba": "Trial session",
+  "Con cuenta": "Signed in",
+  "Salir": "Sign out",
+  "Nueva tarea...": "New task...",
+  "Volver": "Back",
+  "Buscar en esta área": "Search this area",
+  "SIN PROYECTO": "NO PROJECT",
+  "Nombre del proyecto": "Project name",
+  "Nuevo proyecto": "New project",
+  "Eliminar tarea": "Delete task",
+  "Agregar una nota…": "Add a note…",
+  "Estado": "Status",
+  "Prioridad": "Priority",
+  "Fecha": "Date",
+  "Área": "Area",
+  "Proyecto": "Project",
+  "General": "General",
+  "Pasar a Notas": "Move to Notes",
+  "La saca de las tareas y la guarda como nota": "Removes it from your tasks and keeps it as a note",
+  "Creá un área primero.": "Create an area first.",
+  "Escribí una nota y tocá Enter...": "Type a note and press Enter...",
+  "hoy": "today",
+  "ayer": "yesterday",
+  "hace {n} días": "{n} days ago",
+  "Guardada en Notas": "Saved to Notes",
+  "Ahora es una tarea en {dest}": "It's now a task in {dest}",
+  "Nota eliminada": "Note deleted",
+  "Convertir en tarea en…": "Turn into a task in…",
+  "Donde estaba: {place}": "Where it was: {place}",
+  "Enter para crear · arrastrá una tarea a Notas para guardarla acá": "Enter to create · drag a task to Notes to keep it here",
+  "Ninguna nota coincide con \"{q}\".": "No notes match \"{q}\".",
+  "Todavía no hay notas.": "No notes yet.",
+  "Sin título": "Untitled",
+  "Escribí algo…": "Write something…",
+  "de {place}": "from {place}",
+  "Convertir en tarea (volver a donde estaba o elegir un área)": "Turn into a task (back to where it was, or pick an area)",
+  "A tareas": "To tasks",
+  "Eliminar nota": "Delete note",
+  "Terminó ayer": "Ended yesterday",
+  "Hace {n} días": "{n} days ago",
+  "Ver en el calendario": "View in calendar",
+  "Ver": "View",
+  "Vacaciones, viajes, rodajes o cualquier cosa que dure uno o varios días. También podés crearlos arrastrando sobre los días en el Calendario.": "Vacations, trips, shoots or anything that lasts one or more days. You can also create them by dragging across days in the Calendar.",
+  "Todavía no hay eventos.": "No events yet.",
+  "En curso": "Ongoing",
+  "Próximos": "Upcoming",
+  "Pasados": "Past",
+  "NOTAS": "NOTES",
+  "Buscar en notas": "Search notes",
+  "Todavía no hay notas. Tocá + para crear una, o deslizá una tarea hacia la izquierda y tocá Notas.": "No notes yet. Tap + to create one, or swipe a task left and tap Notes.",
+  "EVENTOS": "EVENTS",
+  "Todavía no hay eventos. Tocá + para crear uno (vacaciones, un viaje, lo que dure uno o varios días).": "No events yet. Tap + to create one (a vacation, a trip, anything that lasts one or more days).",
+  "Nota guardada": "Note saved",
+  "Nota creada": "Note created",
+  "Crear": "Create",
+  "Título": "Title",
+  "Convertir en tarea en": "Turn into a task in",
+  "Elegí un área…": "Pick an area…",
+  "Convertir": "Convert",
+  "Listo": "Done",
+  "Ayer": "Yesterday",
+  "Prioridad alta": "High priority",
+  "Nueva tarea…": "New task…",
+  "Marcar como pendiente": "Mark as pending",
+  "Marcar como hecha": "Mark as done",
+  "Haciendo": "Doing",
+  "Mes anterior": "Previous month",
+  "Mes siguiente": "Next month",
+  "hasta {date}": "until {date}",
+  "Agregar a este día": "Add to this day",
+  "Día libre. Escribí arriba o arrastrá una tarea acá.": "Free day. Type above or drag a task here.",
+  "Todo tiene fecha. Arrastrá una tarea acá para sacársela.": "Everything has a date. Drag a task here to clear it.",
+  "Arrastralas a un día para agendarlas.": "Drag them onto a day to schedule them.",
+  "Pasar a hoy": "Move to today",
+  "Quitar fecha": "Clear date",
+  "Elegir mes": "Pick month",
+  "Anterior (RePág)": "Previous (PgUp)",
+  "Ir a hoy (T)": "Go to today (T)",
+  "Siguiente (AvPág)": "Next (PgDn)",
+  "Nuevo evento (también podés arrastrar sobre los días)": "New event (you can also drag across days)",
+  "Mes": "Month",
+  "Semana": "Week",
+  "Día": "Day",
+  "{n} más": "{n} more",
+  "Agregar": "Add",
+  "1 pendiente": "1 pending",
+  "{n} pendientes": "{n} pending",
+  "Todo el día": "All day",
+  "Agregar tarea para {when}": "Add a task for {when}",
+  "este día": "this day",
+  "Nada agendado. Agregá una tarea arriba o arrastrá una desde \"Sin fecha\".": "Nothing scheduled. Add a task above or drag one from \"No date\".",
+  "Hechas": "Done",
+  "Atrasadas": "Overdue",
+  "{n} pasadas a hoy": "{n} moved to today",
+  "Pasar todas a hoy": "Move all to today",
+  "Arrastrá sobre varios días para crear un evento · doble clic para una tarea · arrastrá tareas y eventos para moverlos · T para hoy": "Drag across days to create an event · double-click for a task · drag tasks and events to move them · T for today",
+  "Tarea": "Task",
+  "Detalle": "Details",
+  "+ nota": "+ note",
+  "Cargando...": "Loading...",
+  "Email": "Email",
+  "Contraseña": "Password",
+  "Un momento...": "One moment...",
+  "Ingresar": "Sign in",
+  "Crear cuenta": "Create account",
+  "¿No tenés cuenta? Creá una": "Don't have an account? Create one",
+  "¿Ya tenés cuenta? Ingresá": "Already have an account? Sign in",
+  "o": "or",
+  "Probar sin cuenta": "Try without an account",
+  "Entrás directo, sin registrarte. Tus datos quedan atados a este navegador.": "Jump right in, no sign-up. Your data stays tied to this browser.",
+  "Tus datos están cifrados. Ingresá tu contraseña de cifrado para desbloquearlos.": "Your data is encrypted. Enter your encryption password to unlock it.",
+  "Contraseña de cifrado": "Encryption password",
+  "Desbloqueando...": "Unlocking...",
+  "Desbloquear": "Unlock",
+  "VISTAS": "VIEWS",
+  "Lista": "List",
+  "Por prioridad": "By priority",
+  "Calendario": "Calendar",
+  "Arrastrá una tarea acá para guardarla como nota": "Drag a task here to keep it as a note",
+  "Soltá acá": "Drop here",
+  "ÁREAS": "AREAS",
+  "Todas": "All",
+  "Cambiar color": "Change color",
+  "Quitar de favoritos": "Remove from favorites",
+  "Marcar como favorita": "Mark as favorite",
+  "Renombrar área": "Rename area",
+  "Eliminar área": "Delete area",
+  "Nombre del área...": "Area name...",
+  "Cerrar sesión": "Sign out",
+  "Notificaciones": "Notifications",
+  "Activas · cada hora": "On · every hour",
+  "Apagadas": "Off",
+  "Activar/desactivar notificaciones": "Turn notifications on/off",
+  "Todas las tareas": "All tasks",
+  "Buscar...": "Search...",
+  "Mostrando solo favoritas — clic para ocultarlas": "Showing favorites only — click to hide them",
+  "Ocultando favoritas — clic para apagar el filtro": "Hiding favorites — click to turn the filter off",
+  "Alertas": "Alerts",
+  "Datos cifrados — ver cifrado": "Data encrypted — view encryption",
+  "Datos sin cifrar — ver cifrado": "Data not encrypted — view encryption",
+  "Guardando...": "Saving...",
+  "Sincronizado": "Synced",
+  "Conectado a Supabase": "Connected to Supabase",
+  "Idioma": "Language",
+  "Idioma de la app.": "App language.",
+  "Ver cifrado": "View encryption",
+  "Favoritos": "Favorites",
+  "Texto libre": "Free text",
+  "Formulario": "Form",
+  "Escribí todo lo que tenés en la cabeza... ej: reunión jueves urgente wanka moria, cortar pasto finde casa": "Write down everything on your mind... e.g.: call the plumber tomorrow urgent casa, render previz on friday wanka",
+  "Procesar": "Process",
+  "Enter procesa · Shift+Enter agrega una línea. Se interpreta en el momento, sin IA: \"hoy\" / \"mañana\" / \"el jueves\" / \"finde\" → fecha. \"urgente\" o \"rápido\" → prioridad alta.": "Enter processes · Shift+Enter adds a line. It's read on the spot, no AI: \"today\" / \"tomorrow\" / \"on thursday\" / \"weekend\" → date. \"urgent\" or \"asap\" → high priority.",
+  "Las tareas se crean en": "Tasks are created in",
+  "Título de la tarea": "Task title",
+  "Sin proyecto": "No project",
+  "Sin tareas vencidas.": "No overdue tasks.",
+  "Sin tareas pendientes.": "No pending tasks.",
+  "No hay tareas para mostrar. Escribí algo arriba y tocá \"Procesar\".": "No tasks to show. Type something above and click \"Process\".",
+  "Renombrar proyecto": "Rename project",
+  "Eliminar proyecto": "Delete project",
+  "Nombre del nuevo proyecto...": "New project name...",
+  "Cifrado de extremo a extremo": "End-to-end encryption",
+  "Tus datos están cifrados en tu navegador antes de llegar a Supabase (AES-256-GCM). Ni Supabase ni nadie con acceso a la base puede leerlos.": "Your data is encrypted in your browser before it reaches Supabase (AES-256-GCM). Neither Supabase nor anyone with database access can read it.",
+  "Tus datos se guardan en Supabase sin cifrar. Podés activar el cifrado de extremo a extremo cuando quieras.": "Your data is stored in Supabase unencrypted. You can turn on end-to-end encryption whenever you want.",
+  "Cerrar": "Close",
+  "Desactivar cifrado": "Turn off encryption",
+  "Activar cifrado": "Turn on encryption",
+  "Ingresá tu contraseña de cifrado actual para confirmar que querés desactivarlo. Una vez desactivado, tus datos quedan en texto plano en Supabase.": "Enter your current encryption password to confirm you want to turn it off. Once it's off, your data is stored as plain text in Supabase.",
+  "Contraseña de cifrado actual": "Current encryption password",
+  "Creá una contraseña de cifrado. Es distinta de tu contraseña de acceso y nunca sale de este navegador. Si la olvidás, no hay forma de recuperar los datos.": "Create an encryption password. It's different from your sign-in password and never leaves this browser. If you forget it, there's no way to recover your data.",
+  "Repetí la contraseña": "Repeat the password",
+  "Seguridad": "Security",
+  "Cifrado": "Encryption",
+  "Tus datos están cifrados.": "Your data is encrypted.",
+  "Tus datos no están cifrados.": "Your data isn't encrypted.",
+  "Inicio de semana": "Week starts on",
+  "Orden de los días en el calendario.": "Order of the days in the calendar.",
+  "Lunes (sáb/dom al final)": "Monday (Sat/Sun at the end)",
+  "Domingo": "Sunday",
+  "Feriados en el calendario": "Holidays in the calendar",
+  "Marca los feriados nacionales. En Argentina incluye también los móviles (Carnaval, Semana Santa, trasladables).": "Marks national holidays. For Argentina it also includes the movable ones (Carnival, Holy Week, moved holidays).",
+  "Ninguno": "None",
+  "Argentina": "Argentina",
+  "España": "Spain",
+  "México": "Mexico",
+  "Estados Unidos": "United States",
+  "Brasil": "Brazil",
+  "Chile": "Chile",
+  "Datos": "Data",
+  "Exportar / Restaurar": "Export / Restore",
+  "Backup manual, aparte de la nube.": "Manual backup, separate from the cloud.",
+  "Exportar": "Export",
+  "Restaurar": "Restore",
+  "Zona de riesgo": "Danger zone",
+  "Borrar todos los datos": "Delete all data",
+  "Borra todo. No se puede deshacer.": "Deletes everything. It can't be undone.",
+  "¿Borrar": "Delete",
+  "todas": "all",
+  "tus áreas, proyectos, tareas, eventos y notas? Esta acción no se puede deshacer.": "your areas, projects, tasks, events and notes? This can't be undone.",
+  "Sí, borrar todo": "Yes, delete everything",
+  "¿Eliminar el área \"{name}\"?": "Delete the area \"{name}\"?",
+  "¿Eliminar \"{name}\"?": "Delete \"{name}\"?",
+  "¿Eliminar el proyecto \"{name}\"?": "Delete the project \"{name}\"?",
+  "Esto también va a borrar su tarea. Esta acción no se puede deshacer.": "This will also delete its task. This can't be undone.",
+  "Esto también va a borrar sus {n} tareas. Esta acción no se puede deshacer.": "This will also delete its {n} tasks. This can't be undone.",
+  "Esta acción no se puede deshacer.": "This can't be undone.",
+  "La tarea de este proyecto va a quedar sin proyecto asignado, dentro de \"{area}\".": "This project's task will stay in \"{area}\" with no project.",
+  "Las {n} tareas de este proyecto van a quedar sin proyecto asignado, dentro de \"{area}\".": "This project's {n} tasks will stay in \"{area}\" with no project.",
+  "Por hacer": "To do",
+  "Hecho": "Done",
+  "Alta": "High",
+  "Media": "Medium",
+  "Baja": "Low"
+};
+let CUR_LANG = "es";
+function tr(s, vars) {
+  let out = (CUR_LANG === "en" && EN[s]) || s;
+  if (vars) for (const k of Object.keys(vars)) out = out.split(`{${k}}`).join(vars[k] == null ? "" : String(vars[k]));
+  return out;
+}
+const MONTH_LABELS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTH_ABBR_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAY_LABELS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEKDAY_LABELS_SUN_FIRST_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAY_FULL_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const ML = () => (CUR_LANG === "en" ? MONTH_LABELS_EN : MONTH_LABELS);
+const MA = () => (CUR_LANG === "en" ? MONTH_ABBR_EN : MONTH_ABBR);
+const WL = () => (CUR_LANG === "en" ? WEEKDAY_LABELS_EN : WEEKDAY_LABELS);
+const WLS = () => (CUR_LANG === "en" ? WEEKDAY_LABELS_SUN_FIRST_EN : WEEKDAY_LABELS_SUN_FIRST);
+const WF = () => (CUR_LANG === "en" ? WEEKDAY_FULL_EN : WEEKDAY_FULL_BY_JSDAY);
+
 // ---------- generic helpers ----------
 
 function uid() {
@@ -230,7 +558,7 @@ function addDaysISO(iso, n) {
 
 function weekdayFullOf(iso) {
   const [y, m, d] = iso.split("-").map(Number);
-  return WEEKDAY_FULL_BY_JSDAY[new Date(y, m - 1, d).getDay()];
+  return WF()[new Date(y, m - 1, d).getDay()];
 }
 
 const WEEKDAY_LABELS_SUN_FIRST = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -278,19 +606,19 @@ function buildWeekDays(anchorIso, sundayFirst) {
 // ---------- local (no-AI) free-text parser ----------
 
 const PRIORITY_KEYWORDS = {
-  Alta: ["urgente", "rápido", "rapido", "alta prioridad", "prioridad alta", "alta"],
-  Baja: ["baja prioridad", "prioridad baja", "baja"],
-  Media: ["media prioridad", "prioridad media", "media"],
+  Alta: ["urgente", "rápido", "rapido", "alta prioridad", "prioridad alta", "alta", "high priority", "urgent", "asap"],
+  Baja: ["baja prioridad", "prioridad baja", "baja", "low priority"],
+  Media: ["media prioridad", "prioridad media", "media", "medium priority"],
 };
 
 const WEEKDAY_WORDS = [
-  { dow: 0, words: ["domingo"] },
-  { dow: 1, words: ["lunes"] },
-  { dow: 2, words: ["martes"] },
-  { dow: 3, words: ["miércoles", "miercoles"] },
-  { dow: 4, words: ["jueves"] },
-  { dow: 5, words: ["viernes"] },
-  { dow: 6, words: ["sábado", "sabado"] },
+  { dow: 0, words: ["domingo", "sunday"] },
+  { dow: 1, words: ["lunes", "monday"] },
+  { dow: 2, words: ["martes", "tuesday"] },
+  { dow: 3, words: ["miércoles", "miercoles", "wednesday"] },
+  { dow: 4, words: ["jueves", "thursday"] },
+  { dow: 5, words: ["viernes", "friday"] },
+  { dow: 6, words: ["sábado", "sabado", "saturday"] },
 ];
 
 function stripPhrase(text, phrase) {
@@ -305,7 +633,7 @@ function cleanTitle(text, fallback) {
     .replace(/^[\s,.\-:;]+|[\s,.\-:;]+$/g, "")
     .trim();
   const base = cleaned || fallback.trim();
-  if (!base) return "Tarea sin título";
+  if (!base) return tr("Tarea sin título");
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
@@ -340,6 +668,12 @@ function parseFragmentDate(text, today) {
     { phrase: "manana", get: () => dateToISOLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)) },
     { phrase: "fin de semana", get: () => dateToISOLocal(nextDow(today, 6)) },
     { phrase: "finde", get: () => dateToISOLocal(nextDow(today, 6)) },
+    // English too, so "Texto libre" works when the app is in ENG
+    { phrase: "day after tomorrow", get: () => dateToISOLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2)) },
+    { phrase: "today", get: () => dateToISOLocal(today) },
+    { phrase: "tomorrow", get: () => dateToISOLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)) },
+    { phrase: "this weekend", get: () => dateToISOLocal(nextDow(today, 6)) },
+    { phrase: "weekend", get: () => dateToISOLocal(nextDow(today, 6)) },
   ];
   for (const p of phrases) {
     const stripped = stripPhrase(remaining, p.phrase);
@@ -348,8 +682,10 @@ function parseFragmentDate(text, today) {
 
   for (const wd of WEEKDAY_WORDS) {
     for (const w of wd.words) {
-      const stripped = stripPhrase(remaining, `el ${w}`);
-      if (stripped !== null) return { date: dateToISOLocal(nextDow(today, wd.dow)), text: stripped };
+      for (const prefix of ["el ", "on ", "next "]) {
+        const stripped = stripPhrase(remaining, `${prefix}${w}`);
+        if (stripped !== null) return { date: dateToISOLocal(nextDow(today, wd.dow)), text: stripped };
+      }
     }
     for (const w of wd.words) {
       const stripped = stripPhrase(remaining, w);
@@ -500,7 +836,7 @@ function IconBtn({ icon: Icon, label, onClick, active }) {
 function PriorityBadge({ value, onClick }) {
   return (
     <button className={`badge badge--priority badge--${value}`} onClick={onClick}>
-      {value}
+      {tr(value)}
     </button>
   );
 }
@@ -510,7 +846,7 @@ function StatusPill({ value, onClick }) {
   return (
     <button className={`pill pill--${value.replace(" ", "")}`} onClick={onClick}>
       <Icon size={13} strokeWidth={2.2} />
-      {value}
+      {tr(value)}
     </button>
   );
 }
@@ -528,7 +864,7 @@ function DateField({ value, onChange, overdue, weekStartsSunday }) {
     return { year: t.getFullYear(), month: t.getMonth() };
   });
   const grid = useMemo(() => buildMonthGrid(cursor.year, cursor.month, weekStartsSunday), [cursor, weekStartsSunday]);
-  const weekdayLabels = weekStartsSunday ? WEEKDAY_LABELS_SUN_FIRST : WEEKDAY_LABELS;
+  const weekdayLabels = weekStartsSunday ? WLS() : WL();
 
   const POP_W = 220;
   const POP_H = 300;
@@ -575,7 +911,7 @@ function DateField({ value, onChange, overdue, weekStartsSunday }) {
           <div className="datefield-pop" style={{ top: pos.top, left: pos.left }} onClick={(e) => e.stopPropagation()}>
             <div className="datefield-pop-head">
               <button type="button" className="cal-nav-btn" onClick={() => changeMonth(-1)}><ChevronLeft size={13} /></button>
-              <span className="datefield-pop-label">{MONTH_LABELS[cursor.month]} {cursor.year}</span>
+              <span className="datefield-pop-label">{ML()[cursor.month]} {cursor.year}</span>
               <button type="button" className="cal-nav-btn" onClick={() => changeMonth(1)}><ChevronRight size={13} /></button>
             </div>
             <div className="datefield-grid">
@@ -592,8 +928,8 @@ function DateField({ value, onChange, overdue, weekStartsSunday }) {
               ))}
             </div>
             <div className="datefield-pop-actions">
-              <button type="button" className="datefield-action" onClick={() => pick(todayISO())}>Hoy</button>
-              <button type="button" className="datefield-action" onClick={() => pick(null)}>Limpiar</button>
+              <button type="button" className="datefield-action" onClick={() => pick(todayISO())}>{tr("Hoy")}</button>
+              <button type="button" className="datefield-action" onClick={() => pick(null)}>{tr("Limpiar")}</button>
             </div>
           </div>
         </>,
@@ -617,7 +953,7 @@ function QuickAddRow({ placeholder, onAdd, indent, general }) {
       <div
         className={`quick-add-row quick-add-row--ghost ${indent ? "quick-add-row--indent" : ""}`}
         onClick={() => { setVal(""); setActive(true); }}
-        title={general ? "Agregar tarea general (sin proyecto)" : "Agregar tarea"}
+        title={general ? tr("Agregar tarea general (sin proyecto)") : tr("Agregar tarea")}
       />
     );
   }
@@ -627,7 +963,7 @@ function QuickAddRow({ placeholder, onAdd, indent, general }) {
         autoFocus
         type="text"
         className="quick-add-input"
-        placeholder={placeholder || (general ? "Nueva tarea general" : "Nueva tarea")}
+        placeholder={placeholder || (general ? tr("Nueva tarea general") : tr("Nueva tarea"))}
         value={val}
         onChange={(e) => setVal(e.target.value)}
         onKeyDown={(e) => {
@@ -739,6 +1075,8 @@ export default function TaskApp() {
     });
   }
   const [appLang, setAppLang] = useState(() => loadLocalPrefs().appLang || "es");
+  CUR_LANG = appLang === "en" ? "en" : "es";
+  useEffect(() => { document.documentElement.lang = appLang === "en" ? "en" : "es"; }, [appLang]);
   const [weekStartsSunday, setWeekStartsSunday] = useState(() => !!loadLocalPrefs().weekStartsSunday);
   const [holidayCountry, setHolidayCountry] = useState(() => loadLocalPrefs().holidayCountry || "AR");
   const [search, setSearch] = useState("");
@@ -1007,7 +1345,7 @@ export default function TaskApp() {
       if (cancelled) return;
       if (error) {
         console.error(error);
-        showToast("No se pudo conectar con Supabase");
+        showToast(tr("No se pudo conectar con Supabase"));
         return;
       }
 
@@ -1141,10 +1479,10 @@ export default function TaskApp() {
 
   async function handleEncSetup() {
     setEncError("");
-    if (encPass.length < 8) { setEncError("Usá al menos 8 caracteres."); return; }
-    if (encPass !== encPass2) { setEncError("Las contraseñas no coinciden."); return; }
+    if (encPass.length < 8) { setEncError(tr("Usá al menos 8 caracteres.")); return; }
+    if (encPass !== encPass2) { setEncError(tr("Las contraseñas no coinciden.")); return; }
     if (!window.isSecureContext || !window.crypto?.subtle) {
-      setEncError("El cifrado necesita HTTPS (o localhost). Esta página no cumple ese requisito.");
+      setEncError(tr("El cifrado necesita HTTPS (o localhost). Esta página no cumple ese requisito."));
       return;
     }
     setEncBusy(true);
@@ -1176,10 +1514,10 @@ export default function TaskApp() {
       setEncSettingsView("status");
       hasLoadedRef.current = true;
       setBootStatus("ready");
-      showToast("Cifrado activado");
+      showToast(tr("Cifrado activado"));
     } catch (err) {
       console.error("handleEncSetup", err);
-      setEncError("No se pudo activar el cifrado: " + String(err.message || err));
+      setEncError(tr("No se pudo activar el cifrado: ") + String(err.message || err));
     } finally {
       setEncBusy(false);
     }
@@ -1187,7 +1525,7 @@ export default function TaskApp() {
 
   async function handleEncUnlock() {
     setEncError("");
-    if (!encPass) { setEncError("Ingresá tu contraseña de cifrado."); return; }
+    if (!encPass) { setEncError(tr("Ingresá tu contraseña de cifrado.")); return; }
     setEncBusy(true);
     try {
       // Legacy single-blob migration path: decrypt the old envelope once,
@@ -1253,7 +1591,7 @@ export default function TaskApp() {
       setBootStatus("ready");
     } catch (err) {
       console.error("handleEncUnlock", err);
-      setEncError(err?.name === "OperationError" ? "Contraseña incorrecta." : "No se pudo desbloquear: " + String(err.message || err));
+      setEncError(err?.name === "OperationError" ? tr("Contraseña incorrecta.") : tr("No se pudo desbloquear: ") + String(err.message || err));
     } finally {
       setEncBusy(false);
     }
@@ -1261,7 +1599,7 @@ export default function TaskApp() {
 
   async function handleDisableEncryption() {
     setEncError("");
-    if (!encPass) { setEncError("Ingresá tu contraseña de cifrado actual."); return; }
+    if (!encPass) { setEncError(tr("Ingresá tu contraseña de cifrado actual.")); return; }
     setEncBusy(true);
     try {
       const { data: rows, error: fetchErr } = await supabase.from("task_kv").select("key,value");
@@ -1290,10 +1628,10 @@ export default function TaskApp() {
       setEncPass("");
       setShowEncSettings(false);
       setEncSettingsView("status");
-      showToast("Cifrado desactivado");
+      showToast(tr("Cifrado desactivado"));
     } catch (err) {
       console.error("handleDisableEncryption", err);
-      setEncError(err?.name === "OperationError" ? "Contraseña incorrecta." : "No se pudo desactivar: " + String(err.message || err));
+      setEncError(err?.name === "OperationError" ? tr("Contraseña incorrecta.") : tr("No se pudo desactivar: ") + String(err.message || err));
     } finally {
       setEncBusy(false);
     }
@@ -1410,7 +1748,7 @@ export default function TaskApp() {
   }
 
 
-  function withTimeout(promise, ms = 12000, message = "Se agotó el tiempo de espera — revisá tu conexión a internet.") {
+  function withTimeout(promise, ms = 12000, message = tr("Se agotó el tiempo de espera — revisá tu conexión a internet.")) {
     return Promise.race([
       promise,
       new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
@@ -1419,7 +1757,7 @@ export default function TaskApp() {
 
   async function handleEmailSignIn() {
     setAuthError(""); setAuthNotice("");
-    if (!authEmail.trim() || !authPassword) { setAuthError("Completá email y contraseña."); return; }
+    if (!authEmail.trim() || !authPassword) { setAuthError(tr("Completá email y contraseña.")); return; }
     setAuthBusy(true);
     try {
       const { error } = await withTimeout(supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword }));
@@ -1433,14 +1771,14 @@ export default function TaskApp() {
 
   async function handleEmailSignUp() {
     setAuthError(""); setAuthNotice("");
-    if (!authEmail.trim() || !authPassword) { setAuthError("Completá email y contraseña."); return; }
-    if (authPassword.length < 6) { setAuthError("La contraseña necesita al menos 6 caracteres."); return; }
+    if (!authEmail.trim() || !authPassword) { setAuthError(tr("Completá email y contraseña.")); return; }
+    if (authPassword.length < 6) { setAuthError(tr("La contraseña necesita al menos 6 caracteres.")); return; }
     setAuthBusy(true);
     try {
       const { data, error } = await withTimeout(supabase.auth.signUp({ email: authEmail.trim(), password: authPassword }));
       if (error) { setAuthError(error.message); return; }
       if (data.session) return; // confirmación de email desactivada: ya quedó logueado
-      setAuthNotice("Te mandamos un mail para confirmar la cuenta — revisá tu bandeja de entrada.");
+      setAuthNotice(tr("Te mandamos un mail para confirmar la cuenta — revisá tu bandeja de entrada."));
     } catch (err) {
       setAuthError(String(err.message || err));
     } finally {
@@ -1453,7 +1791,7 @@ export default function TaskApp() {
     setAuthBusy(true);
     try {
       const { error } = await withTimeout(supabase.auth.signInAnonymously());
-      if (error) setAuthError("No se pudo entrar como invitado — el proyecto necesita tener 'Anonymous sign-ins' activado en Supabase.");
+      if (error) setAuthError(tr("No se pudo entrar como invitado — el proyecto necesita tener 'Anonymous sign-ins' activado en Supabase."));
     } catch (err) {
       setAuthError(String(err.message || err));
     } finally {
@@ -1649,27 +1987,27 @@ export default function TaskApp() {
       if (t.status === "Hecho" || !t.date) return;
       const n = daysBetween(today, t.date);
       const base = { key: `t:${t.id}`, task: t, title: t.title, color: areaMap[t.areaId]?.color, go: { taskId: t.id, date: t.date } };
-      if (n < 0) items.push({ ...base, kind: "vencida", rank: 0, urgent: true, chip: "Vencida", meta: `${placeOf(t)} · venció ${n === -1 ? "ayer" : `hace ${-n} días`}`, sortDate: t.date });
-      else if (n === 0) items.push({ ...base, kind: "hoy", rank: 1, urgent: true, chip: "Hoy", meta: placeOf(t), sortDate: t.date });
-      else if (n === 1) items.push({ ...base, kind: "manana", rank: 2, urgent: true, chip: "Mañana", meta: placeOf(t), sortDate: t.date });
-      else if (n <= 3) items.push({ ...base, kind: "pronto", rank: 4, chip: `En ${n} días`, meta: `${placeOf(t)} · ${fmtDate(t.date)}`, sortDate: t.date });
+      if (n < 0) items.push({ ...base, kind: "vencida", rank: 0, urgent: true, chip: tr("Vencida"), meta: `${placeOf(t)} · ${n === -1 ? tr("venció ayer") : tr("venció hace {n} días", { n: -n })}`, sortDate: t.date });
+      else if (n === 0) items.push({ ...base, kind: "hoy", rank: 1, urgent: true, chip: tr("Hoy"), meta: placeOf(t), sortDate: t.date });
+      else if (n === 1) items.push({ ...base, kind: "manana", rank: 2, urgent: true, chip: tr("Mañana"), meta: placeOf(t), sortDate: t.date });
+      else if (n <= 3) items.push({ ...base, kind: "pronto", rank: 4, chip: tr("En {n} días", { n }), meta: `${placeOf(t)} · ${fmtDate(t.date)}`, sortDate: t.date });
     });
     events.forEach((ev) => {
       if (!ev.start) return;
       const end = ev.end || ev.start;
-      const base = { key: `e:${ev.id}`, event: ev, title: ev.title || "Evento", color: ev.color, go: { eventId: ev.id, date: ev.start } };
-      const span = ev.start === end ? fmtDate(ev.start) : `${fmtDate(ev.start)} al ${fmtDate(end)}`;
+      const base = { key: `e:${ev.id}`, event: ev, title: ev.title || tr("Evento"), color: ev.color, go: { eventId: ev.id, date: ev.start } };
+      const span = ev.start === end ? fmtDate(ev.start) : tr("{a} al {b}", { a: fmtDate(ev.start), b: fmtDate(end) });
       if (ev.start <= today && end >= today) {
         const total = daysBetween(ev.start, end) + 1;
         const nth = daysBetween(ev.start, today) + 1;
-        items.push({ ...base, kind: "evento", rank: 3, chip: total > 1 ? `Día ${nth} de ${total}` : "Evento hoy", meta: total > 1 ? `hasta el ${fmtDate(end)}` : "", sortDate: ev.start });
+        items.push({ ...base, kind: "evento", rank: 3, chip: total > 1 ? tr("Día {n} de {total}", { n: nth, total }) : tr("Evento hoy"), meta: total > 1 ? tr("hasta el {date}", { date: fmtDate(end) }) : "", sortDate: ev.start });
       } else {
         const n = daysBetween(today, ev.start);
-        if (n >= 1 && n <= 3) items.push({ ...base, kind: "eventoPronto", rank: 5, chip: n === 1 ? "Mañana" : `En ${n} días`, meta: span, sortDate: ev.start });
+        if (n >= 1 && n <= 3) items.push({ ...base, kind: "eventoPronto", rank: 5, chip: n === 1 ? tr("Mañana") : tr("En {n} días", { n }), meta: span, sortDate: ev.start });
       }
     });
     return items.sort((a, b) => a.rank - b.rank || (a.sortDate < b.sortDate ? -1 : a.sortDate > b.sortDate ? 1 : 0));
-  }, [tasks, events, areaMap, alertsDay]);
+  }, [tasks, events, areaMap, alertsDay, appLang]);
 
   useEffect(() => {
     if (urgentItems.length < 2 || urgentPaused) return;
@@ -1684,7 +2022,7 @@ export default function TaskApp() {
     const urgent = list.filter((i) => i.urgent);
     if (!urgent.length) return null;
     return urgent.slice(0, 4).map((i) => `${i.chip}: ${i.title}${i.meta ? ` (${i.meta})` : ""}`).join("\n")
-      + (urgent.length > 4 ? `\ny ${urgent.length - 4} más` : "");
+      + (urgent.length > 4 ? "\n" + tr("y {n} más", { n: urgent.length - 4 }) : "");
   }
 
   const urgentItemsRef = useRef(urgentItems);
@@ -1696,7 +2034,7 @@ export default function TaskApp() {
       if (stopped || Notification.permission !== "granted") return;
       const body = alertsNotificationBody(urgentItemsRef.current);
       if (!body) return;
-      try { new Notification("Task App — alertas", { body, tag: "task-alerts" }); } catch { /* not available here */ }
+      try { new Notification(tr("Task App — alertas"), { body, tag: "task-alerts" }); } catch { /* not available here */ }
     };
     const first = () => { setTimeout(fire, 4000); };
     if (Notification.permission === "default") Notification.requestPermission().then(first).catch(() => {});
@@ -1735,10 +2073,10 @@ export default function TaskApp() {
         onMouseEnter={() => setUrgentPaused(true)}
         onMouseLeave={() => setUrgentPaused(false)}
         onClick={() => current && goToAlert(current)}
-        title={current ? "Ir a esta alerta" : undefined}
+        title={current ? tr("Ir a esta alerta") : undefined}
       >
         <span className={`urgent-label ${anyUrgent ? "" : "urgent-label--off"} ${current && !anyUrgent ? "urgent-label--info" : ""}`}>
-          <span className={`urgent-dot ${anyUrgent ? "" : "urgent-dot--off"}`} />ALERTAS
+          <span className={`urgent-dot ${anyUrgent ? "" : "urgent-dot--off"}`} />{tr("ALERTAS")}
         </span>
         {current ? (
           <span className="urgent-item" key={current.key + ":" + urgentIndex}>
@@ -1748,13 +2086,13 @@ export default function TaskApp() {
             {current.meta && <span className="urgent-meta">{current.meta}</span>}
           </span>
         ) : (
-          <span className="urgent-empty">Sin vencimientos ni alertas por ahora.</span>
+          <span className="urgent-empty">{tr("Sin vencimientos ni alertas por ahora.")}</span>
         )}
         {n > 1 && (
           <span className="urgent-nav" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setUrgentIndex((i) => (i - 1 + n) % n)} title="Anterior"><ChevronLeft size={15} /></button>
+            <button onClick={() => setUrgentIndex((i) => (i - 1 + n) % n)} title={tr("Anterior")}><ChevronLeft size={15} /></button>
             <span className="urgent-count">{(urgentIndex % n) + 1}/{n}</span>
-            <button onClick={() => setUrgentIndex((i) => (i + 1) % n)} title="Siguiente"><ChevronRight size={15} /></button>
+            <button onClick={() => setUrgentIndex((i) => (i + 1) % n)} title={tr("Siguiente")}><ChevronRight size={15} /></button>
           </span>
         )}
       </div>
@@ -1820,7 +2158,7 @@ export default function TaskApp() {
     a.download = "taskapp_backup_" + new Date().toISOString().slice(0, 10) + ".json";
     a.click();
     URL.revokeObjectURL(a.href);
-    showToast("Backup descargado");
+    showToast(tr("Backup descargado"));
   }
 
   function restoreData(evt) {
@@ -1830,13 +2168,13 @@ export default function TaskApp() {
     const reader = new FileReader();
     reader.onload = (e) => {
       let data;
-      try { data = JSON.parse(e.target.result); } catch (err) { showToast("Archivo inválido"); return; }
-      if (!Array.isArray(data.areas) || !Array.isArray(data.tasks)) { showToast("El archivo no tiene el formato esperado"); return; }
+      try { data = JSON.parse(e.target.result); } catch (err) { showToast(tr("Archivo inválido")); return; }
+      if (!Array.isArray(data.areas) || !Array.isArray(data.tasks)) { showToast(tr("El archivo no tiene el formato esperado")); return; }
       setAreas(data.areas);
       setTasks(data.tasks);
       setEvents(Array.isArray(data.events) ? data.events : []);
       setNotes(Array.isArray(data.notes) ? data.notes : []);
-      showToast("Datos restaurados");
+      showToast(tr("Datos restaurados"));
     };
     reader.readAsText(file);
   }
@@ -1847,7 +2185,7 @@ export default function TaskApp() {
     setEvents([]);
     setNotes([]);
     setConfirmingWipe(false);
-    showToast("Todo borrado");
+    showToast(tr("Todo borrado"));
   }
 
   function selectArea(id) {
@@ -1892,7 +2230,7 @@ export default function TaskApp() {
         for (const nt of newTasks) list = insertAtEndOfGroup(list, nt);
         return list;
       });
-      showToast(`${newTasks.length} tarea${newTasks.length === 1 ? "" : "s"} creada${newTasks.length === 1 ? "" : "s"}`);
+      showToast(newTasks.length === 1 ? tr("1 tarea creada") : tr("{n} tareas creadas", { n: newTasks.length }));
       return workingAreas;
     });
     setFreeText("");
@@ -1908,7 +2246,7 @@ export default function TaskApp() {
     ]);
     setManualTitle("");
     setManualProjectId("");
-    showToast("Tarea creada");
+    showToast(tr("Tarea creada"));
   }
 
   function addTaskForFocusedDay() {
@@ -1920,7 +2258,7 @@ export default function TaskApp() {
       ...prev,
     ]);
     setDayQuickTitle("");
-    showToast("Tarea creada");
+    showToast(tr("Tarea creada"));
   }
 
   function cycleStatus(id) {
@@ -2152,7 +2490,7 @@ export default function TaskApp() {
     if (!title.trim()) return;
     const newTask = { id: uid(), areaId, projectId: projectId || null, title: title.trim(), note: "", status: "Por hacer", priority: "Media", date: null };
     setTasks((prev) => insertAtEndOfGroup(prev, newTask));
-    showToast("Tarea creada");
+    showToast(tr("Tarea creada"));
   }
 
   function backspaceMergeWithPrevious(t, keyGuardRef) {
@@ -2218,7 +2556,7 @@ export default function TaskApp() {
       setTasks((prev) => prev.filter((t) => t.areaId !== deleteTarget.id));
       setAreas((prev) => prev.filter((a) => a.id !== deleteTarget.id));
       if (selectedAreaId === deleteTarget.id) selectArea("all");
-      showToast("Área eliminada");
+      showToast(tr("Área eliminada"));
     } else if (deleteTarget.type === "project") {
       setAreas((prev) => prev.map((a) => (
         a.id === deleteTarget.areaId
@@ -2227,14 +2565,14 @@ export default function TaskApp() {
       )));
       setTasks((prev) => prev.filter((t) => t.projectId !== deleteTarget.id));
       if (selectedProjectId === deleteTarget.id) setSelectedProjectId(null);
-      showToast("Proyecto eliminado");
+      showToast(tr("Proyecto eliminado"));
     } else if (deleteTarget.type === "task") {
       removeTask(deleteTarget.id);
       if (mobileScreen === "task" && mobileTaskId === deleteTarget.id) {
         setMobileScreen("area");
         setMobileTaskId(null);
       }
-      showToast("Tarea eliminada");
+      showToast(tr("Tarea eliminada"));
     }
     setDeleteTarget(null);
   }
@@ -2355,7 +2693,7 @@ export default function TaskApp() {
     const t = tasks.find((x) => x.id === id);
     if (!t || (t.date || null) === (iso || null)) return;
     setDate(id, iso);
-    showToast(iso ? `Movida al ${fmtDate(iso)}` : "Sin fecha");
+    showToast(iso ? tr("Movida al {date}", { date: fmtDate(iso) }) : tr("Sin fecha"));
   }
 
   function calDragProps(t) {
@@ -2446,7 +2784,7 @@ export default function TaskApp() {
       const len = isoDiff(ev.start, ev.end || ev.start);
       return { ...ev, start: newStart, end: addDaysISO(newStart, len), updatedAt: Date.now() };
     }));
-    showToast(`Evento movido al ${fmtDate(newStart)}`);
+    showToast(tr("Evento movido al {date}", { date: fmtDate(newStart) }));
   }
 
   function openEventEditor(data, x, y) {
@@ -2460,13 +2798,13 @@ export default function TaskApp() {
     if (!start) return;
     if (!end) end = start;
     if (end < start) [start, end] = [end, start];
-    const title = eventEditor.title.trim() || "Evento";
+    const title = eventEditor.title.trim() || tr("Evento");
     if (eventEditor.id) {
       setEvents((prev) => prev.map((ev) => (ev.id === eventEditor.id ? { ...ev, title, start, end, color: eventEditor.color, note: eventEditor.note || "", updatedAt: Date.now() } : ev)));
-      showToast("Evento guardado");
+      showToast(tr("Evento guardado"));
     } else {
       setEvents((prev) => [...prev, { id: uid(), title, start, end, color: eventEditor.color, note: eventEditor.note || "", createdAt: Date.now() }]);
-      showToast("Evento creado");
+      showToast(tr("Evento creado"));
     }
     setEventEditor(null);
   }
@@ -2475,14 +2813,14 @@ export default function TaskApp() {
     setEvents((prev) => prev.filter((ev) => ev.id !== id));
     setEventEditor(null);
     setMobileEventEdit(null);
-    showToast("Evento eliminado");
+    showToast(tr("Evento eliminado"));
   }
 
   function eventSpanLabel(ev) {
     const end = ev.end || ev.start;
     if (end === ev.start) return fmtDate(ev.start);
     const days = isoDiff(ev.start, end) + 1;
-    return `${fmtDate(ev.start)} al ${fmtDate(end)} · ${days} días`;
+    return tr("{a} al {b} · {n} días", { a: fmtDate(ev.start), b: fmtDate(end), n: days });
   }
 
   // drag-select days to create an event (mouse only)
@@ -2610,37 +2948,37 @@ export default function TaskApp() {
         <div className="cal-pop cal-pop--event" style={{ ...style, "--chip": eventEditor.color }} onClick={(e) => e.stopPropagation()}>
           <div className="cal-pop-area">
             <span className="cal-pop-area-dot" />
-            {eventEditor.id ? "Evento" : "Nuevo evento"} · {days} {days === 1 ? "día" : "días"}
+            {eventEditor.id ? tr("Evento") : tr("Nuevo evento")} · {days === 1 ? tr("1 día") : tr("{n} días", { n: days })}
             <button className="cal-pop-close" onClick={() => setEventEditor(null)}><X size={14} /></button>
           </div>
           <input
             className="cal-pop-title cal-pop-title--input"
             autoFocus
-            placeholder="Vacaciones, viaje, congreso…"
+            placeholder={tr("Vacaciones, viaje, congreso…")}
             value={eventEditor.title}
             onChange={(e) => set({ title: e.target.value })}
             onKeyDown={(e) => { if (e.key === "Enter") saveEventEditor(); if (e.key === "Escape") setEventEditor(null); }}
           />
           <div className="cal-pop-fields">
-            <span className="cal-pop-label">Desde</span>
+            <span className="cal-pop-label">{tr("Desde")}</span>
             <DateField value={eventEditor.start} onChange={(v) => v && set({ start: v, end: eventEditor.end && eventEditor.end < v ? v : eventEditor.end })} weekStartsSunday={weekStartsSunday} />
-            <span className="cal-pop-label">Hasta</span>
+            <span className="cal-pop-label">{tr("Hasta")}</span>
             <DateField value={eventEditor.end} onChange={(v) => v && set({ end: v < eventEditor.start ? eventEditor.start : v })} weekStartsSunday={weekStartsSunday} />
-            <span className="cal-pop-label">Color</span>
+            <span className="cal-pop-label">{tr("Color")}</span>
             <span className="ev-swatches">
               {EVENT_COLORS.map((c) => (
-                <button key={c} className={`ev-swatch ${eventEditor.color === c ? "ev-swatch--on" : ""}`} style={{ background: c }} onClick={() => set({ color: c })} title="Color" />
+                <button key={c} className={`ev-swatch ${eventEditor.color === c ? "ev-swatch--on" : ""}`} style={{ background: c }} onClick={() => set({ color: c })} title={tr("Color")} />
               ))}
             </span>
           </div>
-          <textarea className="ev-note" rows={2} placeholder="Nota (opcional)" value={eventEditor.note || ""} onChange={(e) => set({ note: e.target.value })} />
+          <textarea className="ev-note" rows={2} placeholder={tr("Nota (opcional)")} value={eventEditor.note || ""} onChange={(e) => set({ note: e.target.value })} />
           <div className="cal-pop-actions">
             {eventEditor.id && (
-              <button className="cal-pop-btn cal-pop-btn--danger" onClick={() => deleteEvent(eventEditor.id)}><Trash2 size={13} /> Eliminar</button>
+              <button className="cal-pop-btn cal-pop-btn--danger" onClick={() => deleteEvent(eventEditor.id)}><Trash2 size={13} />{" "}{tr("Eliminar")}</button>
             )}
             <span style={{ flex: 1 }} />
-            <button className="cal-pop-btn" onClick={() => setEventEditor(null)}>Cancelar</button>
-            <button className="cal-pop-btn cal-pop-btn--primary" onClick={saveEventEditor}>{eventEditor.id ? "Guardar" : "Crear evento"}</button>
+            <button className="cal-pop-btn" onClick={() => setEventEditor(null)}>{tr("Cancelar")}</button>
+            <button className="cal-pop-btn cal-pop-btn--primary" onClick={saveEventEditor}>{eventEditor.id ? tr("Guardar") : tr("Crear evento")}</button>
           </div>
         </div>
       </>,
@@ -2672,7 +3010,7 @@ export default function TaskApp() {
       ...prev,
     ]);
     setCalAddText("");
-    showToast("Tarea creada");
+    showToast(tr("Tarea creada"));
   }
 
   function commitCalPopTitle(id) {
@@ -2772,7 +3110,7 @@ export default function TaskApp() {
 
   function renderMobileTaskIcons(t) {
     return (
-      <button className="m-task-icons" onClick={() => openMobileTask(t.id, t.areaId)} title="Ver detalle">
+      <button className="m-task-icons" onClick={() => openMobileTask(t.id, t.areaId)} title={tr("Ver detalle")}>
         <Flag size={15} className={`m-flag m-flag--${t.priority}`} />
         {t.date && <CalendarIcon size={15} className={isOverdue(t.date, t.status) ? "m-cal m-cal--overdue" : "m-cal"} />}
         <Info size={16} className={`m-info-icon ${t.status === "Hecho" ? "m-info-icon--done" : t.status === "Haciendo" ? "m-info-icon--doing" : ""}`} />
@@ -2938,10 +3276,10 @@ export default function TaskApp() {
         {revealed ? (
           <span className="m-row-actions">
             <button className="m-row-tonote" onClick={() => convertTaskToNote(t.id)}>
-              <StickyNote size={16} /> Notas
+              <StickyNote size={16} />{" "}{tr("Notas")}
             </button>
             <button className="m-row-delete" onClick={() => setDeleteTarget({ type: "task", id: t.id })}>
-              <Trash2 size={16} /> Eliminar
+              <Trash2 size={16} />{" "}{tr("Eliminar")}
             </button>
           </span>
         ) : (
@@ -2998,32 +3336,32 @@ export default function TaskApp() {
           <div className="m-toolbar">
             <div className="m-search">
               <Search size={15} className="m-search-icon" />
-              <input placeholder="Buscar" value={mobileSearch} onChange={(e) => { setMobileSearch(e.target.value); setMobileExpandedFilter(null); }} />
+              <input placeholder={tr("Buscar")} value={mobileSearch} onChange={(e) => { setMobileSearch(e.target.value); setMobileExpandedFilter(null); }} />
             </div>
-            <button className={`m-pill ${hideCompleted ? "m-pill--on" : ""}`} onClick={() => setHideCompleted((v) => !v)} title="Ocultar hechas">
+            <button className={`m-pill ${hideCompleted ? "m-pill--on" : ""}`} onClick={() => setHideCompleted((v) => !v)} title={tr("Ocultar hechas")}>
               {hideCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
             </button>
             <button
               className={`m-pill ${areaFilterMode !== "off" ? "m-pill--on" : ""}`}
               onClick={() => setAreaFilterMode((m) => (m === "off" ? "solo" : m === "solo" ? "mute" : "off"))}
-              title={areaFilterMode === "solo" ? "Mostrando solo favoritas — tocá para ocultarlas" : areaFilterMode === "mute" ? "Ocultando favoritas — tocá para apagar el filtro" : "Filtro de favoritas (apagado)"}
+              title={areaFilterMode === "solo" ? tr("Mostrando solo favoritas — tocá para ocultarlas") : areaFilterMode === "mute" ? tr("Ocultando favoritas — tocá para apagar el filtro") : tr("Filtro de favoritas (apagado)")}
             >
               {areaFilterMode === "mute" ? <EyeOff size={18} /> : <Star size={18} fill={areaFilterMode === "solo" ? "currentColor" : "none"} />}
             </button>
-            <button className="m-add-btn" onClick={openMobileQuickAdd} title="Nueva nota"><Plus size={20} strokeWidth={2.6} /></button>
+            <button className="m-add-btn" onClick={openMobileQuickAdd} title={tr("Nueva nota")}><Plus size={20} strokeWidth={2.6} /></button>
             {syncError ? (
-              <button className="m-pill m-pill--bad" onClick={saveDiff} title="No se pudo guardar — tocá para reintentar"><CloudOff size={18} /></button>
+              <button className="m-pill m-pill--bad" onClick={saveDiff} title={tr("No se pudo guardar — tocá para reintentar")}><CloudOff size={18} /></button>
             ) : (
-              <button className="m-pill" onClick={() => setShowSettingsPanel(true)} title="Configuración"><Settings size={18} /></button>
+              <button className="m-pill" onClick={() => setShowSettingsPanel(true)} title={tr("Configuración")}><Settings size={18} /></button>
             )}
           </div>
         </div>
         <div className="m-filters">
           <button className={`m-filter ${mobileExpandedFilter === "pendientes" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("pendientes")}>
-            Pendientes <b>{pendientes}</b>
+            {tr("Pendientes")}{" "}<b>{pendientes}</b>
           </button>
           <button className={`m-filter ${mobileExpandedFilter === "vencidas" ? "m-filter--active" : ""}`} onClick={() => toggleMobileFilter("vencidas")}>
-            Vencidas <b className={vencidas > 0 ? "m-filter-bad" : ""}>{vencidas}</b>
+            {tr("Vencidas")}{" "}<b className={vencidas > 0 ? "m-filter-bad" : ""}>{vencidas}</b>
           </button>
         </div>
 
@@ -3042,7 +3380,7 @@ export default function TaskApp() {
         >
           {q ? (
             <>
-              {matchedAreas.length === 0 && matchedTasks.length === 0 && <div className="m-empty-hint">Sin resultados para "{mobileSearch}"</div>}
+              {matchedAreas.length === 0 && matchedTasks.length === 0 && <div className="m-empty-hint">{tr("Sin resultados para \"{q}\"", { q: mobileSearch })}</div>}
               {matchedAreas.map((a) => (
                 <button key={a.id} className="m-area-card" style={{ "--chip": a.color }} onClick={() => openMobileArea(a.id)}>
                   <span className="m-area-bar" style={{ background: a.color }} />
@@ -3065,10 +3403,10 @@ export default function TaskApp() {
           ) : mobileExpandedFilter ? (
             <>
               {filteredTasks.length === 0
-                ? <div className="m-empty-hint">{mobileExpandedFilter === "vencidas" ? "No hay nada vencido." : "No hay pendientes."}</div>
+                ? <div className="m-empty-hint">{mobileExpandedFilter === "vencidas" ? tr("No hay nada vencido.") : tr("No hay pendientes.")}</div>
                 : (
                   <div className="m-card">
-                    <div className="m-card-title">{mobileExpandedFilter === "vencidas" ? "Vencidas" : "Pendientes"} <span>{filteredTasks.length}</span></div>
+                    <div className="m-card-title">{mobileExpandedFilter === "vencidas" ? tr("Vencidas") : tr("Pendientes")} <span>{filteredTasks.length}</span></div>
                     {filteredTasks.map((t) => renderMobileTaskRow(t, { showArea: true }))}
                   </div>
                 )}
@@ -3078,12 +3416,12 @@ export default function TaskApp() {
               <div className="m-special-row">
                 <button className="m-special-card" style={{ "--chip": "#A78BFA" }} onClick={() => { setMobileScreen("events"); setMobileSearch(""); }}>
                   <CalendarRange size={18} />
-                  <span className="m-special-name">Eventos</span>
+                  <span className="m-special-name">{tr("Eventos")}</span>
                   <span className="m-area-count">{eventGroups().now.length + eventGroups().next.length}</span>
                 </button>
                 <button className="m-special-card" style={{ "--chip": "#F2AB43" }} onClick={() => { setMobileScreen("notes"); setMobileSearch(""); }}>
                   <StickyNote size={18} />
-                  <span className="m-special-name">Notas</span>
+                  <span className="m-special-name">{tr("Notas")}</span>
                   <span className="m-area-count">{notes.length}</span>
                 </button>
               </div>
@@ -3105,7 +3443,7 @@ export default function TaskApp() {
                     <span className="m-area-bar" style={{ background: a.color }} />
                     <span className="m-area-name">{a.name.toUpperCase()}</span>
                     <button className="m-row-delete" onClick={() => setDeleteTarget({ type: "area", id: a.id })}>
-                      <Trash2 size={16} /> Eliminar
+                      <Trash2 size={16} />{" "}{tr("Eliminar")}
                     </button>
                   </div>
                 ) : (
@@ -3129,7 +3467,7 @@ export default function TaskApp() {
                 <div className="m-inline-add">
                   <input
                     autoFocus
-                    placeholder="Nombre del área"
+                    placeholder={tr("Nombre del área")}
                     value={mobileNewAreaName}
                     onChange={(e) => setMobileNewAreaName(e.target.value)}
                     onKeyDown={(e) => {
@@ -3152,7 +3490,7 @@ export default function TaskApp() {
                   />
                 </div>
               ) : (
-                <button className="m-add-area-btn" onClick={() => setMobileAddingArea(true)}><Plus size={14} /> Nueva área</button>
+                <button className="m-add-area-btn" onClick={() => setMobileAddingArea(true)}><Plus size={14} />{" "}{tr("Nueva área")}</button>
               )}
             </>
           )}
@@ -3160,10 +3498,10 @@ export default function TaskApp() {
 
         <div className="m-session-bar">
           <div>
-            <div className="m-account-name">{session?.user?.is_anonymous ? "Invitado" : (maskEmail(session?.user?.email))}</div>
-            <div className="m-account-sub">{session?.user?.is_anonymous ? "Sesión de prueba" : "Con cuenta"}</div>
+            <div className="m-account-name">{session?.user?.is_anonymous ? tr("Invitado") : (maskEmail(session?.user?.email))}</div>
+            <div className="m-account-sub">{session?.user?.is_anonymous ? tr("Sesión de prueba") : tr("Con cuenta")}</div>
           </div>
-          <button className="m-account-logout" onClick={handleLogout}>Salir</button>
+          <button className="m-account-logout" onClick={handleLogout}>{tr("Salir")}</button>
         </div>
         {renderMobileUrgentBar()}
       </div>
@@ -3193,7 +3531,7 @@ export default function TaskApp() {
       <div className="m-inline-add-zone m-inline-add-zone--active">
         <input
           autoFocus
-          placeholder="Nueva tarea..."
+          placeholder={tr("Nueva tarea...")}
           value={mobileInlineAddText}
           onChange={(e) => setMobileInlineAddText(e.target.value)}
           onKeyDown={(e) => {
@@ -3237,18 +3575,18 @@ export default function TaskApp() {
         {renderMobileBrandBar()}
         <div className="m-topbar">
           <div className="m-toolbar">
-            <button className="m-pill" onClick={mobileGoBack} title="Volver"><ChevronLeft size={20} /></button>
+            <button className="m-pill" onClick={mobileGoBack} title={tr("Volver")}><ChevronLeft size={20} /></button>
             <div className="m-header-title"><span className="m-header-dot" style={{ background: area.color }} />{area.name.toUpperCase()}</div>
-            <button className={`m-pill ${hideCompleted ? "m-pill--on" : ""}`} onClick={() => setHideCompleted((v) => !v)} title="Ocultar hechas">
+            <button className={`m-pill ${hideCompleted ? "m-pill--on" : ""}`} onClick={() => setHideCompleted((v) => !v)} title={tr("Ocultar hechas")}>
               {hideCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
             </button>
           </div>
           <div className="m-toolbar">
             <div className="m-search">
               <Search size={15} className="m-search-icon" />
-              <input placeholder="Buscar en esta área" value={mobileSearch} onChange={(e) => setMobileSearch(e.target.value)} />
+              <input placeholder={tr("Buscar en esta área")} value={mobileSearch} onChange={(e) => setMobileSearch(e.target.value)} />
             </div>
-            <button className="m-add-btn" onClick={openMobileQuickAdd} title="Nueva nota"><Plus size={20} strokeWidth={2.6} /></button>
+            <button className="m-add-btn" onClick={openMobileQuickAdd} title={tr("Nueva nota")}><Plus size={20} strokeWidth={2.6} /></button>
           </div>
         </div>
 
@@ -3269,7 +3607,7 @@ export default function TaskApp() {
           {q ? (
             <>
               {tasks.filter((t) => t.areaId === area.id && matchesQuery(t)).length === 0 && (
-                <div className="m-empty-hint">Sin resultados para "{mobileSearch}"</div>
+                <div className="m-empty-hint">{tr("Sin resultados para \"{q}\"", { q: mobileSearch })}</div>
               )}
               {tasks.filter((t) => t.areaId === area.id && matchesQuery(t)).length > 0 && (
                 <div className="m-card">{tasks.filter((t) => t.areaId === area.id && matchesQuery(t)).map((t) => renderMobileTaskRow(t))}</div>
@@ -3325,7 +3663,7 @@ export default function TaskApp() {
           <div className={`m-project-block m-project-block--general ${projects.length > 0 && generalTasks.length === 0 ? "m-project-block--bare" : ""}`}>
             {projects.length > 0 && generalTasks.length > 0 && (
               <div className="m-project-header m-project-header--static">
-                <span className="m-project-name m-project-name--general">SIN PROYECTO</span>
+                <span className="m-project-name m-project-name--general">{tr("SIN PROYECTO")}</span>
                 <span className="m-project-count">{generalTasks.length}</span>
               </div>
             )}
@@ -3342,7 +3680,7 @@ export default function TaskApp() {
               <div className="m-inline-add">
                 <input
                   autoFocus
-                  placeholder="Nombre del proyecto"
+                  placeholder={tr("Nombre del proyecto")}
                   value={mobileNewProjectName}
                   onChange={(e) => setMobileNewProjectName(e.target.value)}
                   onKeyDown={(e) => {
@@ -3356,7 +3694,7 @@ export default function TaskApp() {
                 />
               </div>
             ) : (
-              <button className="m-add-area-btn" onClick={() => setMobileAddingProjectAreaId(area.id)}><Plus size={14} /> Nuevo proyecto</button>
+              <button className="m-add-area-btn" onClick={() => setMobileAddingProjectAreaId(area.id)}><Plus size={14} />{" "}{tr("Nuevo proyecto")}</button>
             )}
           </div>
         )}
@@ -3384,9 +3722,9 @@ export default function TaskApp() {
         {renderMobileBrandBar()}
         <div className="m-topbar">
           <div className="m-toolbar">
-            <button className="m-pill" onClick={mobileGoBack} title="Volver"><ChevronLeft size={20} /></button>
+            <button className="m-pill" onClick={mobileGoBack} title={tr("Volver")}><ChevronLeft size={20} /></button>
             <div className="m-header-title"><span className="m-header-dot" style={{ background: area?.color }} />{area?.name?.toUpperCase()}{project ? ` · ${project.name}` : ""}</div>
-            <button className="m-pill m-pill--danger" onClick={() => { setDeleteTarget({ type: "task", id: t.id }); }} title="Eliminar tarea"><Trash2 size={17} /></button>
+            <button className="m-pill m-pill--danger" onClick={() => { setDeleteTarget({ type: "task", id: t.id }); }} title={tr("Eliminar tarea")}><Trash2 size={17} /></button>
           </div>
         </div>
 
@@ -3402,43 +3740,43 @@ export default function TaskApp() {
           />
           <textarea
             className="m-task-detail-note"
-            placeholder="Agregar una nota…"
+            placeholder={tr("Agregar una nota…")}
             defaultValue={t.note}
             onBlur={(e) => setNote(t.id, e.target.value)}
           />
 
           <div className="m-task-detail-options">
             <div className="m-option-row">
-              <span className="m-option-label">Estado</span>
+              <span className="m-option-label">{tr("Estado")}</span>
               <StatusPill value={t.status} onClick={() => cycleStatus(t.id)} />
             </div>
             <div className="m-option-row">
-              <span className="m-option-label">Prioridad</span>
+              <span className="m-option-label">{tr("Prioridad")}</span>
               <PriorityBadge value={t.priority} onClick={() => cyclePriority(t.id)} />
             </div>
             <div className="m-option-row">
-              <span className="m-option-label">Fecha</span>
+              <span className="m-option-label">{tr("Fecha")}</span>
               <DateField value={t.date} onChange={(v) => setDate(t.id, v)} overdue={isOverdue(t.date, t.status)} weekStartsSunday={weekStartsSunday} />
             </div>
             <div className="m-option-row">
-              <span className="m-option-label">Área</span>
+              <span className="m-option-label">{tr("Área")}</span>
               <select className="m-option-select" value={t.areaId} onChange={(e) => moveToArea(e.target.value)}>
                 {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </div>
             {area?.projects?.length > 0 && (
               <div className="m-option-row">
-                <span className="m-option-label">Proyecto</span>
+                <span className="m-option-label">{tr("Proyecto")}</span>
                 <select className="m-option-select" value={t.projectId || ""} onChange={(e) => moveToProject(e.target.value)}>
-                  <option value="">General</option>
+                  <option value="">{tr("General")}</option>
                   {area.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
             )}
           </div>
           <button className="m-detail-action" onClick={() => { const id = t.id; setMobileScreen("area"); setMobileTaskId(null); convertTaskToNote(id); }}>
-            <StickyNote size={17} /> Pasar a Notas
-            <span>La saca de las tareas y la guarda como nota</span>
+            <StickyNote size={17} />{" "}{tr("Pasar a Notas")}
+            <span>{tr("La saca de las tareas y la guarda como nota")}</span>
           </button>
         </div>
         {renderMobileUrgentBar()}
@@ -3453,9 +3791,9 @@ export default function TaskApp() {
         <div className="m-screen">
           <div className="m-header">
             <button className="m-back" onClick={mobileGoBack}><ChevronLeft size={20} /></button>
-            <span className="m-header-title">Nueva nota</span>
+            <span className="m-header-title">{tr("Nueva nota")}</span>
           </div>
-          <div className="m-empty-hint">Creá un área primero.</div>
+          <div className="m-empty-hint">{tr("Creá un área primero.")}</div>
         </div>
       );
     }
@@ -3472,7 +3810,7 @@ export default function TaskApp() {
         {renderMobileBrandBar()}
         <div className="m-topbar">
         <div className="m-toolbar">
-          <button className="m-pill" onClick={mobileGoBack} title="Volver"><ChevronLeft size={20} /></button>
+          <button className="m-pill" onClick={mobileGoBack} title={tr("Volver")}><ChevronLeft size={20} /></button>
           <select
             className="m-quickadd-area-select"
             value={area.id}
@@ -3486,7 +3824,7 @@ export default function TaskApp() {
               value={projectId || ""}
               onChange={(e) => setMobileQuickAddProjectId(e.target.value || null)}
             >
-              <option value="">General</option>
+              <option value="">{tr("General")}</option>
               {area.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
@@ -3495,7 +3833,7 @@ export default function TaskApp() {
         <div className="m-quickadd-input-row">
           <input
             autoFocus
-            placeholder="Escribí una nota y tocá Enter..."
+            placeholder={tr("Escribí una nota y tocá Enter...")}
             value={mobileQuickAddText}
             onChange={(e) => setMobileQuickAddText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
@@ -3521,10 +3859,10 @@ export default function TaskApp() {
     const d = new Date(ms);
     const iso = dateToISOLocal(d);
     const today = todayISO();
-    if (iso === today) return "hoy";
-    if (iso === addDaysISO(today, -1)) return "ayer";
+    if (iso === today) return tr("hoy");
+    if (iso === addDaysISO(today, -1)) return tr("ayer");
     const n = isoDiff(iso, today);
-    if (n > 0 && n < 7) return `hace ${n} días`;
+    if (n > 0 && n < 7) return tr("hace {n} días", { n });
     return fmtDate(iso);
   }
 
@@ -3547,7 +3885,7 @@ export default function TaskApp() {
     setCalPopover(null);
     setMobileRevealedTaskId(null);
     forceImmediateSaveRef.current = true;
-    showToast("Guardada en Notas");
+    showToast(tr("Guardada en Notas"));
   }
 
   // Notes are general (not tied to an area). A note that came from a task
@@ -3576,7 +3914,7 @@ export default function TaskApp() {
     setMobileNoteEdit(null);
     setNotePick(null);
     const dest = [areaMap[areaId]?.name, projectId ? areaMap[areaId]?.projects?.find((p) => p.id === projectId)?.name : null].filter(Boolean).join(" / ");
-    showToast(`Ahora es una tarea en ${dest || "General"}`);
+    showToast(tr("Ahora es una tarea en {dest}", { dest: dest || "General" }));
   }
 
   function createNote({ title = "", body = "" } = {}) {
@@ -3592,7 +3930,7 @@ export default function TaskApp() {
   function deleteNote(id) {
     setNotes((prev) => prev.filter((n) => n.id !== id));
     setMobileNoteEdit(null);
-    showToast("Nota eliminada");
+    showToast(tr("Nota eliminada"));
   }
 
   const visibleNotes = useMemo(() => {
@@ -3642,10 +3980,10 @@ export default function TaskApp() {
       <>
         <div className="cal-pop-scrim" onClick={() => setNotePick(null)} />
         <div className="cal-pop note-pick" style={style} onClick={(e) => e.stopPropagation()}>
-          <div className="note-pick-title">Convertir en tarea en…</div>
+          <div className="note-pick-title">{tr("Convertir en tarea en…")}</div>
           {origin && (
             <button className="note-pick-item note-pick-item--origin" onClick={() => noteToTask(n.id, origin.areaId, origin.projectId)}>
-              <Undo2 size={13} /> Donde estaba: {origin.label}
+              <Undo2 size={13} /> {tr("Donde estaba: {place}", { place: origin.label })}
             </button>
           )}
           <div className="note-pick-list">
@@ -3672,7 +4010,7 @@ export default function TaskApp() {
         <div className="notes-new">
           <Plus size={15} />
           <input
-            placeholder="Nueva nota"
+            placeholder={tr("Nueva nota")}
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.currentTarget.value.trim()) {
                 createNote({ title: e.currentTarget.value.trim() });
@@ -3680,11 +4018,11 @@ export default function TaskApp() {
               }
             }}
           />
-          <span className="notes-new-hint">Enter para crear · arrastrá una tarea a Notas para guardarla acá</span>
+          <span className="notes-new-hint">{tr("Enter para crear · arrastrá una tarea a Notas para guardarla acá")}</span>
         </div>
         {visibleNotes.length === 0 ? (
           <div className="notes-empty">
-            {search.trim() ? `Ninguna nota coincide con "${search.trim()}".` : "Todavía no hay notas."}
+            {search.trim() ? tr("Ninguna nota coincide con \"{q}\".", { q: search.trim() }) : tr("Todavía no hay notas.")}
           </div>
         ) : (
           <div className="notes-grid">
@@ -3696,7 +4034,7 @@ export default function TaskApp() {
                     className="note-title"
                     defaultValue={n.title}
                     key={n.id + ":t:" + (n.updatedAt || 0)}
-                    placeholder="Sin título"
+                    placeholder={tr("Sin título")}
                     onBlur={(e) => { if (e.target.value !== n.title) updateNote(n.id, { title: e.target.value }); }}
                     onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
                   />
@@ -3704,7 +4042,7 @@ export default function TaskApp() {
                     className="note-body"
                     defaultValue={n.body}
                     key={n.id + ":b:" + (n.updatedAt || 0)}
-                    placeholder="Escribí algo…"
+                    placeholder={tr("Escribí algo…")}
                     rows={1}
                     ref={autoGrow}
                     onInput={(e) => autoGrow(e.target)}
@@ -3713,15 +4051,15 @@ export default function TaskApp() {
                   <div className="note-foot">
                     <span className="note-date">
                       {relTimeLabel(n.updatedAt || n.createdAt)}
-                      {origin ? ` · de ${origin.label}` : ""}
+                      {origin ? " · " + tr("de {place}", { place: origin.label }) : ""}
                     </span>
                     <span className="note-actions">
                       <button
                         className="note-act"
                         onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setNotePick({ id: n.id, x: r.right, y: r.bottom, top: r.top }); }}
-                        title="Convertir en tarea (volver a donde estaba o elegir un área)"
-                      ><Undo2 size={13} /> A tareas</button>
-                      <button className="note-act note-act--danger" onClick={() => deleteNote(n.id)} title="Eliminar nota"><Trash2 size={13} /></button>
+                        title={tr("Convertir en tarea (volver a donde estaba o elegir un área)")}
+                      ><Undo2 size={13} />{" "}{tr("A tareas")}</button>
+                      <button className="note-act note-act--danger" onClick={() => deleteNote(n.id)} title={tr("Eliminar nota")}><Trash2 size={13} /></button>
                     </span>
                   </div>
                 </div>
@@ -3749,14 +4087,14 @@ export default function TaskApp() {
     const end = ev.end || ev.start;
     if (ev.start <= today && end >= today) {
       const total = isoDiff(ev.start, end) + 1;
-      return total > 1 ? `Día ${isoDiff(ev.start, today) + 1} de ${total}` : "Hoy";
+      return total > 1 ? tr("Día {n} de {total}", { n: isoDiff(ev.start, today) + 1, total }) : tr("Hoy");
     }
     if (ev.start > today) {
       const n = isoDiff(today, ev.start);
-      return n === 1 ? "Mañana" : `En ${n} días`;
+      return n === 1 ? tr("Mañana") : tr("En {n} días", { n });
     }
     const n = isoDiff(end, today);
-    return n === 1 ? "Terminó ayer" : `Hace ${n} días`;
+    return n === 1 ? tr("Terminó ayer") : tr("Hace {n} días", { n });
   }
 
   function renderEventsView() {
@@ -3777,7 +4115,7 @@ export default function TaskApp() {
               </span>
               <span className="event-card-when">{eventWhenLabel(ev)}</span>
             </button>
-            <button className="note-act" onClick={() => { setView("calendario"); setCalView("mes"); focusDay(ev.start); }} title="Ver en el calendario"><CalendarIcon size={13} /> Ver</button>
+            <button className="note-act" onClick={() => { setView("calendario"); setCalView("mes"); focusDay(ev.start); }} title={tr("Ver en el calendario")}><CalendarIcon size={13} />{" "}{tr("Ver")}</button>
           </div>
         ))}
       </div>
@@ -3785,16 +4123,16 @@ export default function TaskApp() {
     return (
       <div className="events-wrap">
         <div className="events-head">
-          <div className="events-head-text">Vacaciones, viajes, rodajes o cualquier cosa que dure uno o varios días. También podés crearlos arrastrando sobre los días en el Calendario.</div>
+          <div className="events-head-text">{tr("Vacaciones, viajes, rodajes o cualquier cosa que dure uno o varios días. También podés crearlos arrastrando sobre los días en el Calendario.")}</div>
           <button
             className="procesar-btn"
             onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); openEventEditor({ start: todayISO(), end: todayISO() }, r.left - 200, r.bottom); }}
-          ><Plus size={14} /> Nuevo evento</button>
+          ><Plus size={14} />{" "}{tr("Nuevo evento")}</button>
         </div>
-        {events.length === 0 && <div className="notes-empty">Todavía no hay eventos.</div>}
-        {section("En curso", g.now)}
-        {section("Próximos", g.next)}
-        {section("Pasados", g.past.slice(0, 20), "event-card--past")}
+        {events.length === 0 && <div className="notes-empty">{tr("Todavía no hay eventos.")}</div>}
+        {section(tr("En curso"), g.now)}
+        {section(tr("Próximos"), g.next)}
+        {section(tr("Pasados"), g.past.slice(0, 20), "event-card--past")}
         {renderEventEditor()}
       </div>
     );
@@ -3811,20 +4149,20 @@ export default function TaskApp() {
         {renderMobileBrandBar()}
         <div className="m-topbar">
           <div className="m-toolbar">
-            <button className="m-pill" onClick={mobileGoBack} title="Volver"><ChevronLeft size={20} /></button>
-            <div className="m-header-title"><StickyNote size={15} />NOTAS</div>
-            <button className="m-add-btn" onClick={() => setMobileNoteEdit({ id: null, title: "", body: "" })} title="Nueva nota"><Plus size={20} strokeWidth={2.6} /></button>
+            <button className="m-pill" onClick={mobileGoBack} title={tr("Volver")}><ChevronLeft size={20} /></button>
+            <div className="m-header-title"><StickyNote size={15} />{tr("NOTAS")}</div>
+            <button className="m-add-btn" onClick={() => setMobileNoteEdit({ id: null, title: "", body: "" })} title={tr("Nueva nota")}><Plus size={20} strokeWidth={2.6} /></button>
           </div>
           <div className="m-toolbar">
             <div className="m-search">
               <Search size={15} className="m-search-icon" />
-              <input placeholder="Buscar en notas" value={mobileSearch} onChange={(e) => setMobileSearch(e.target.value)} />
+              <input placeholder={tr("Buscar en notas")} value={mobileSearch} onChange={(e) => setMobileSearch(e.target.value)} />
             </div>
           </div>
         </div>
         <div className="m-list">
           {list.length === 0 && (
-            <div className="m-empty-hint">{q ? `Sin resultados para "${mobileSearch}"` : "Todavía no hay notas. Tocá + para crear una, o deslizá una tarea hacia la izquierda y tocá Notas."}</div>
+            <div className="m-empty-hint">{q ? tr("Sin resultados para \"{q}\"", { q: mobileSearch }) : tr("Todavía no hay notas. Tocá + para crear una, o deslizá una tarea hacia la izquierda y tocá Notas.")}</div>
           )}
           {list.length > 0 && (
             <div className="m-card m-notes-card">
@@ -3832,9 +4170,9 @@ export default function TaskApp() {
                 const origin = noteOrigin(n);
                 return (
                   <button key={n.id} className="m-note-row" onClick={() => setMobileNoteEdit({ ...n, dest: origin ? "origin" : "" })}>
-                    <span className="m-note-title">{n.title || "Sin título"}</span>
+                    <span className="m-note-title">{n.title || tr("Sin título")}</span>
                     {n.body && <span className="m-note-body">{n.body}</span>}
-                    <span className="m-note-meta">{relTimeLabel(n.updatedAt || n.createdAt)}{origin ? ` · de ${origin.label}` : ""}</span>
+                    <span className="m-note-meta">{relTimeLabel(n.updatedAt || n.createdAt)}{origin ? " · " + tr("de {place}", { place: origin.label }) : ""}</span>
                   </button>
                 );
               })}
@@ -3868,16 +4206,16 @@ export default function TaskApp() {
         {renderMobileBrandBar()}
         <div className="m-topbar">
           <div className="m-toolbar">
-            <button className="m-pill" onClick={mobileGoBack} title="Volver"><ChevronLeft size={20} /></button>
-            <div className="m-header-title"><CalendarRange size={15} />EVENTOS</div>
-            <button className="m-add-btn" onClick={() => setMobileEventEdit({ id: null, title: "", start: todayISO(), end: todayISO(), color: EVENT_COLORS[events.length % EVENT_COLORS.length], note: "" })} title="Nuevo evento"><Plus size={20} strokeWidth={2.6} /></button>
+            <button className="m-pill" onClick={mobileGoBack} title={tr("Volver")}><ChevronLeft size={20} /></button>
+            <div className="m-header-title"><CalendarRange size={15} />{tr("EVENTOS")}</div>
+            <button className="m-add-btn" onClick={() => setMobileEventEdit({ id: null, title: "", start: todayISO(), end: todayISO(), color: EVENT_COLORS[events.length % EVENT_COLORS.length], note: "" })} title={tr("Nuevo evento")}><Plus size={20} strokeWidth={2.6} /></button>
           </div>
         </div>
         <div className="m-list">
-          {events.length === 0 && <div className="m-empty-hint">Todavía no hay eventos. Tocá + para crear uno (vacaciones, un viaje, lo que dure uno o varios días).</div>}
-          {section("En curso", g.now)}
-          {section("Próximos", g.next)}
-          {section("Pasados", g.past.slice(0, 20))}
+          {events.length === 0 && <div className="m-empty-hint">{tr("Todavía no hay eventos. Tocá + para crear uno (vacaciones, un viaje, lo que dure uno o varios días).")}</div>}
+          {section(tr("En curso"), g.now)}
+          {section(tr("Próximos"), g.next)}
+          {section(tr("Pasados"), g.past.slice(0, 20))}
         </div>
         {renderMobileUrgentBar()}
       </div>
@@ -3889,11 +4227,11 @@ export default function TaskApp() {
     if (!ed || !ed.start) return;
     let start = ed.start, end = ed.end || ed.start;
     if (end < start) [start, end] = [end, start];
-    const title = (ed.title || "").trim() || "Evento";
+    const title = (ed.title || "").trim() || tr("Evento");
     if (ed.id) setEvents((prev) => prev.map((ev) => (ev.id === ed.id ? { ...ev, title, start, end, color: ed.color, note: ed.note || "", updatedAt: Date.now() } : ev)));
     else setEvents((prev) => [...prev, { id: uid(), title, start, end, color: ed.color || EVENT_COLORS[0], note: ed.note || "", createdAt: Date.now() }]);
     setMobileEventEdit(null);
-    showToast(ed.id ? "Evento guardado" : "Evento creado");
+    showToast(ed.id ? tr("Evento guardado") : tr("Evento creado"));
   }
 
   function saveMobileNote() {
@@ -3905,7 +4243,7 @@ export default function TaskApp() {
     if (ed.id) updateNote(ed.id, { title, body });
     else setNotes((prev) => [{ id: uid(), title, body, areaId: null, projectId: null, createdAt: Date.now() }, ...prev]);
     setMobileNoteEdit(null);
-    showToast(ed.id ? "Nota guardada" : "Nota creada");
+    showToast(ed.id ? tr("Nota guardada") : tr("Nota creada"));
   }
 
   function renderMobileSheets() {
@@ -3916,23 +4254,23 @@ export default function TaskApp() {
       return (
         <div className="modal-overlay" onClick={() => setMobileEventEdit(null)}>
           <div className="modal-card m-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">{ed.id ? "Evento" : "Nuevo evento"} <span className="m-sheet-sub">{days} {days === 1 ? "día" : "días"}</span></div>
-            <input className="settings-input m-sheet-input" placeholder="Vacaciones, viaje, congreso…" value={ed.title} onChange={(e) => set({ title: e.target.value })} autoFocus={!ed.id} />
+            <div className="modal-title">{ed.id ? tr("Evento") : tr("Nuevo evento")} <span className="m-sheet-sub">{days === 1 ? tr("1 día") : tr("{n} días", { n: days })}</span></div>
+            <input className="settings-input m-sheet-input" placeholder={tr("Vacaciones, viaje, congreso…")} value={ed.title} onChange={(e) => set({ title: e.target.value })} autoFocus={!ed.id} />
             <div className="m-sheet-dates">
-              <label>Desde<input type="date" className="settings-input m-sheet-input" value={ed.start || ""} onChange={(e) => e.target.value && set({ start: e.target.value, end: ed.end && ed.end < e.target.value ? e.target.value : ed.end })} /></label>
-              <label>Hasta<input type="date" className="settings-input m-sheet-input" value={ed.end || ""} min={ed.start} onChange={(e) => e.target.value && set({ end: e.target.value < ed.start ? ed.start : e.target.value })} /></label>
+              <label>{tr("Desde")}<input type="date" className="settings-input m-sheet-input" value={ed.start || ""} onChange={(e) => e.target.value && set({ start: e.target.value, end: ed.end && ed.end < e.target.value ? e.target.value : ed.end })} /></label>
+              <label>{tr("Hasta")}<input type="date" className="settings-input m-sheet-input" value={ed.end || ""} min={ed.start} onChange={(e) => e.target.value && set({ end: e.target.value < ed.start ? ed.start : e.target.value })} /></label>
             </div>
             <div className="ev-swatches m-sheet-swatches">
               {EVENT_COLORS.map((c) => (
                 <button key={c} className={`ev-swatch ${ed.color === c ? "ev-swatch--on" : ""}`} style={{ background: c }} onClick={() => set({ color: c })} />
               ))}
             </div>
-            <textarea className="settings-input m-sheet-input" rows={2} placeholder="Nota (opcional)" value={ed.note || ""} onChange={(e) => set({ note: e.target.value })} />
+            <textarea className="settings-input m-sheet-input" rows={2} placeholder={tr("Nota (opcional)")} value={ed.note || ""} onChange={(e) => set({ note: e.target.value })} />
             <div className="modal-actions">
               {ed.id && <button className="modal-btn modal-btn--cancel m-sheet-danger" onClick={() => deleteEvent(ed.id)}><Trash2 size={14} /></button>}
               <span style={{ flex: 1 }} />
-              <button className="modal-btn modal-btn--cancel" onClick={() => setMobileEventEdit(null)}>Cancelar</button>
-              <button className="modal-btn modal-btn--primary" onClick={saveMobileEvent}>{ed.id ? "Guardar" : "Crear"}</button>
+              <button className="modal-btn modal-btn--cancel" onClick={() => setMobileEventEdit(null)}>{tr("Cancelar")}</button>
+              <button className="modal-btn modal-btn--primary" onClick={saveMobileEvent}>{ed.id ? tr("Guardar") : tr("Crear")}</button>
             </div>
           </div>
         </div>
@@ -3944,18 +4282,18 @@ export default function TaskApp() {
       return (
         <div className="modal-overlay" onClick={saveMobileNote}>
           <div className="modal-card m-sheet" onClick={(e) => e.stopPropagation()}>
-            <input className="m-sheet-note-title" placeholder="Título" value={ed.title} onChange={(e) => set({ title: e.target.value })} autoFocus={!ed.id} />
-            <textarea className="settings-input m-sheet-input m-sheet-note-body" rows={6} placeholder="Escribí algo…" value={ed.body} onChange={(e) => set({ body: e.target.value })} />
+            <input className="m-sheet-note-title" placeholder={tr("Título")} value={ed.title} onChange={(e) => set({ title: e.target.value })} autoFocus={!ed.id} />
+            <textarea className="settings-input m-sheet-input m-sheet-note-body" rows={6} placeholder={tr("Escribí algo…")} value={ed.body} onChange={(e) => set({ body: e.target.value })} />
             {ed.id && (() => {
               const n = notes.find((x) => x.id === ed.id);
               const origin = n ? noteOrigin(n) : null;
               return (
                 <div className="m-note-convert">
-                  <span className="m-note-convert-label">Convertir en tarea en</span>
+                  <span className="m-note-convert-label">{tr("Convertir en tarea en")}</span>
                   <div className="m-note-convert-row">
                     <select className="m-option-select m-note-convert-select" value={ed.dest || ""} onChange={(e) => set({ dest: e.target.value })}>
-                      <option value="" disabled>Elegí un área…</option>
-                      {origin && <option value="origin">Donde estaba: {origin.label}</option>}
+                      <option value="" disabled>{tr("Elegí un área…")}</option>
+                      {origin && <option value="origin">{tr("Donde estaba: {place}", { place: origin.label })}</option>}
                       {orderedAreas.map((a) => (
                         <React.Fragment key={a.id}>
                           <option value={a.id + "|"}>{a.name}</option>
@@ -3971,7 +4309,7 @@ export default function TaskApp() {
                         if (ed.dest === "origin") noteToTask(ed.id, origin.areaId, origin.projectId, override);
                         else { const [aId, pId] = ed.dest.split("|"); noteToTask(ed.id, aId, pId || null, override); }
                       }}
-                    ><Undo2 size={14} /> Convertir</button>
+                    ><Undo2 size={14} />{" "}{tr("Convertir")}</button>
                   </div>
                 </div>
               );
@@ -3979,7 +4317,7 @@ export default function TaskApp() {
             <div className="modal-actions">
               {ed.id && <button className="modal-btn modal-btn--cancel m-sheet-danger" onClick={() => deleteNote(ed.id)}><Trash2 size={14} /></button>}
               <span style={{ flex: 1 }} />
-              <button className="modal-btn modal-btn--primary" onClick={saveMobileNote}>Listo</button>
+              <button className="modal-btn modal-btn--primary" onClick={saveMobileNote}>{tr("Listo")}</button>
             </div>
           </div>
         </div>
@@ -3995,14 +4333,16 @@ export default function TaskApp() {
 
   function longDateLabel(iso) {
     const [y, m, d] = iso.split("-").map(Number);
-    return `${weekdayFullOf(iso)} ${d} de ${MONTH_LABELS[m - 1].toLowerCase()}${y !== new Date().getFullYear() ? ` de ${y}` : ""}`;
+    const thisYear = y === new Date().getFullYear();
+    if (CUR_LANG === "en") return `${weekdayFullOf(iso)}, ${ML()[m - 1]} ${d}${thisYear ? "" : `, ${y}`}`;
+    return `${weekdayFullOf(iso)} ${d} de ${ML()[m - 1].toLowerCase()}${thisYear ? "" : ` de ${y}`}`;
   }
 
   function relativeDayLabel(iso) {
     const t = todayISO();
-    if (iso === t) return "Hoy";
-    if (iso === addDaysISO(t, 1)) return "Mañana";
-    if (iso === addDaysISO(t, -1)) return "Ayer";
+    if (iso === t) return tr("Hoy");
+    if (iso === addDaysISO(t, 1)) return tr("Mañana");
+    if (iso === addDaysISO(t, -1)) return tr("Ayer");
     return null;
   }
 
@@ -4019,7 +4359,7 @@ export default function TaskApp() {
         title={`${t.title} · ${areaMap[t.areaId]?.name || ""}`}
         {...calDragProps(t)}
       >
-        {t.priority === "Alta" && !done && <span className="cal-chip-prio" aria-label="Prioridad alta" />}
+        {t.priority === "Alta" && !done && <span className="cal-chip-prio" aria-label={tr("Prioridad alta")} />}
         <span className="cal-chip-text">{t.title}</span>
       </button>
     );
@@ -4031,7 +4371,7 @@ export default function TaskApp() {
       <input
         className="cal-inline-add"
         autoFocus
-        placeholder="Nueva tarea…"
+        placeholder={tr("Nueva tarea…")}
         value={calAddText}
         onClick={(e) => e.stopPropagation()}
         onChange={(e) => setCalAddText(e.target.value)}
@@ -4056,7 +4396,7 @@ export default function TaskApp() {
         style={{ "--chip": a?.color || "#8d94a0" }}
         {...calDragProps(t)}
       >
-        <button className="agenda-check" onClick={() => toggleTaskDone(t.id)} title={done ? "Marcar como pendiente" : "Marcar como hecha"}>
+        <button className="agenda-check" onClick={() => toggleTaskDone(t.id)} title={done ? tr("Marcar como pendiente") : tr("Marcar como hecha")}>
           {done ? <CheckCircle2 size={big ? 18 : 16} /> : <Circle size={big ? 18 : 16} />}
         </button>
         <button className="agenda-main" onClick={(e) => openCalTaskPopover(e, t)}>
@@ -4068,21 +4408,21 @@ export default function TaskApp() {
           </span>
         </button>
         {t.priority === "Alta" && !done && <Flag size={13} className="agenda-flag" />}
-        {t.status === "Haciendo" && <CircleDot size={14} className="agenda-doing" title="Haciendo" />}
+        {t.status === "Haciendo" && <CircleDot size={14} className="agenda-doing" title={tr("Haciendo")} />}
       </div>
     );
   }
 
   function renderMiniMonth() {
     const today = todayISO();
-    const labels = weekStartsSunday ? WEEKDAY_LABELS_SUN_FIRST : WEEKDAY_LABELS;
+    const labels = weekStartsSunday ? WLS() : WL();
     return (
       <div className="mini-month">
         <div className="mini-month-head">
-          <span className="mini-month-label">{MONTH_LABELS[calCursor.month]} {calCursor.year}</span>
+          <span className="mini-month-label">{ML()[calCursor.month]} {calCursor.year}</span>
           <span className="mini-month-nav">
-            <button className="mini-nav-btn" onClick={() => { setCalCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { ...c, month: c.month - 1 })); }} title="Mes anterior"><ChevronLeft size={14} /></button>
-            <button className="mini-nav-btn" onClick={() => { setCalCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { ...c, month: c.month + 1 })); }} title="Mes siguiente"><ChevronRight size={14} /></button>
+            <button className="mini-nav-btn" onClick={() => { setCalCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { ...c, month: c.month - 1 })); }} title={tr("Mes anterior")}><ChevronLeft size={14} /></button>
+            <button className="mini-nav-btn" onClick={() => { setCalCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { ...c, month: c.month + 1 })); }} title={tr("Mes siguiente")}><ChevronRight size={14} /></button>
           </span>
         </div>
         <div className="mini-month-grid">
@@ -4119,7 +4459,7 @@ export default function TaskApp() {
           <section className={`cal-side-section ${calDropTarget === selectedDay ? "cal-side-section--drop" : ""}`} {...calDropProps(selectedDay)}>
             <div className="cal-side-day-head">
               <div>
-                <div className="cal-side-day-title">{rel ? `${rel}, ` : ""}{longDateLabel(selectedDay).replace(/^./, (c) => (rel ? c.toLowerCase() : c))}</div>
+                <div className="cal-side-day-title">{rel ? `${rel}, ` : ""}{longDateLabel(selectedDay).replace(/^./, (c) => (rel && CUR_LANG !== "en" ? c.toLowerCase() : c))}</div>
                 {holidayName && <div className="cal-side-holiday">{holidayName}</div>}
               </div>
               <span className="cal-side-count">{dayTasks.filter((t) => t.status !== "Hecho").length}</span>
@@ -4135,7 +4475,7 @@ export default function TaskApp() {
                   >
                     <span className="ev-row-bar" />
                     <span className="ev-row-title">{ev.title}</span>
-                    {(ev.end || ev.start) !== ev.start && <span className="ev-row-meta">hasta {fmtDate(ev.end)}</span>}
+                    {(ev.end || ev.start) !== ev.start && <span className="ev-row-meta">{tr("hasta {date}", { date: fmtDate(ev.end) })}</span>}
                   </button>
                 ))}
               </div>
@@ -4144,14 +4484,14 @@ export default function TaskApp() {
               <Plus size={14} />
               <input
                 type="text"
-                placeholder="Agregar a este día"
+                placeholder={tr("Agregar a este día")}
                 value={dayQuickTitle}
                 onChange={(e) => setDayQuickTitle(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addTaskForFocusedDay()}
               />
             </div>
             <div className="cal-side-list">
-              {dayTasks.length === 0 && <div className="cal-side-empty">Día libre. Escribí arriba o arrastrá una tarea acá.</div>}
+              {dayTasks.length === 0 && <div className="cal-side-empty">{tr("Día libre. Escribí arriba o arrastrá una tarea acá.")}</div>}
               {dayTasks.map((t) => renderAgendaRow(t))}
             </div>
           </section>
@@ -4160,16 +4500,16 @@ export default function TaskApp() {
         <section className={`cal-side-section cal-side-section--undated ${calDropTarget === "undated" ? "cal-side-section--drop" : ""}`} {...calDropProps("undated")}>
           <button className="cal-side-toggle" onClick={() => setCalUndatedOpen((v) => !v)}>
             <Inbox size={14} />
-            <span>Sin fecha</span>
+            <span>{tr("Sin fecha")}</span>
             <span className="cal-side-count">{undatedTasks.length}</span>
             <span className="cal-side-toggle-chev">{calUndatedOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
           </button>
           {calUndatedOpen && (
             <div className="cal-side-list">
               {undatedTasks.length === 0
-                ? <div className="cal-side-empty">Todo tiene fecha. Arrastrá una tarea acá para sacársela.</div>
+                ? <div className="cal-side-empty">{tr("Todo tiene fecha. Arrastrá una tarea acá para sacársela.")}</div>
                 : <>
-                    <div className="cal-side-hint">Arrastralas a un día para agendarlas.</div>
+                    <div className="cal-side-hint">{tr("Arrastralas a un día para agendarlas.")}</div>
                     {undatedTasks.map((t) => renderAgendaRow(t))}
                   </>}
             </div>
@@ -4236,22 +4576,22 @@ export default function TaskApp() {
           />
           {t.note && <div className="cal-pop-note">{t.note}</div>}
           <div className="cal-pop-fields">
-            <span className="cal-pop-label">Estado</span>
+            <span className="cal-pop-label">{tr("Estado")}</span>
             <StatusPill value={t.status} onClick={() => cycleStatus(t.id)} />
-            <span className="cal-pop-label">Prioridad</span>
+            <span className="cal-pop-label">{tr("Prioridad")}</span>
             <span><PriorityBadge value={t.priority} onClick={() => cyclePriority(t.id)} /></span>
-            <span className="cal-pop-label">Fecha</span>
+            <span className="cal-pop-label">{tr("Fecha")}</span>
             <DateField value={t.date} onChange={(v) => setDate(t.id, v)} overdue={isOverdue(t.date, t.status)} weekStartsSunday={weekStartsSunday} />
           </div>
           <div className="cal-pop-actions">
             {t.date && t.date !== todayISO() && (
-              <button className="cal-pop-btn" onClick={() => calSetTaskDate(t.id, todayISO())}><ArrowRight size={13} /> Pasar a hoy</button>
+              <button className="cal-pop-btn" onClick={() => calSetTaskDate(t.id, todayISO())}><ArrowRight size={13} />{" "}{tr("Pasar a hoy")}</button>
             )}
             {t.date && (
-              <button className="cal-pop-btn" onClick={() => { calSetTaskDate(t.id, null); setCalPopover(null); }}><CalendarX size={13} /> Quitar fecha</button>
+              <button className="cal-pop-btn" onClick={() => { calSetTaskDate(t.id, null); setCalPopover(null); }}><CalendarX size={13} />{" "}{tr("Quitar fecha")}</button>
             )}
             <span style={{ flex: 1 }} />
-            <button className="cal-pop-btn cal-pop-btn--danger" onClick={() => { setCalPopover(null); setDeleteTarget({ type: "task", id: t.id }); }} title="Eliminar"><Trash2 size={13} /></button>
+            <button className="cal-pop-btn cal-pop-btn--danger" onClick={() => { setCalPopover(null); setDeleteTarget({ type: "task", id: t.id }); }} title={tr("Eliminar")}><Trash2 size={13} /></button>
           </div>
         </div>
       </>,
@@ -4261,18 +4601,18 @@ export default function TaskApp() {
 
   function renderCalendar() {
     const today = todayISO();
-    const labels = weekStartsSunday ? WEEKDAY_LABELS_SUN_FIRST : WEEKDAY_LABELS;
+    const labels = weekStartsSunday ? WLS() : WL();
     const weeks = monthGrid.length / 7;
     const maxChips = weeks >= 6 ? 3 : 4;
     const isWeekendIdx = (i) => (weekStartsSunday ? i === 0 || i === 6 : i >= 5);
 
     let title;
-    if (calView === "mes") title = `${MONTH_LABELS[calCursor.month]} ${calCursor.year}`;
+    if (calView === "mes") title = `${ML()[calCursor.month]} ${calCursor.year}`;
     else if (calView === "semana") {
       const a = weekDays[0].iso.split("-").map(Number), b = weekDays[6].iso.split("-").map(Number);
       title = a[1] === b[1]
-        ? `${a[2]} – ${b[2]} de ${MONTH_LABELS[a[1] - 1].toLowerCase()} ${a[0]}`
-        : `${a[2]} ${MONTH_ABBR[a[1] - 1].toLowerCase()} – ${b[2]} ${MONTH_ABBR[b[1] - 1].toLowerCase()} ${b[0]}`;
+        ? (CUR_LANG === "en" ? `${ML()[a[1] - 1]} ${a[2]} – ${b[2]}, ${a[0]}` : `${a[2]} – ${b[2]} de ${ML()[a[1] - 1].toLowerCase()} ${a[0]}`)
+        : (CUR_LANG === "en" ? `${MA()[a[1] - 1]} ${a[2]} – ${MA()[b[1] - 1]} ${b[2]}, ${b[0]}` : `${a[2]} ${MA()[a[1] - 1].toLowerCase()} – ${b[2]} ${MA()[b[1] - 1].toLowerCase()} ${b[0]}`);
     } else title = longDateLabel(selectedDay);
 
     const dayCellHandlers = (iso) => ({
@@ -4293,7 +4633,7 @@ export default function TaskApp() {
               <button
                 className="cal-title"
                 onClick={() => (showMonthPicker ? setShowMonthPicker(false) : openMonthPicker())}
-                title="Elegir mes"
+                title={tr("Elegir mes")}
               >
                 {title}
                 <ChevronDown size={16} className="cal-title-chev" />
@@ -4306,7 +4646,7 @@ export default function TaskApp() {
                     <button className="cal-nav-btn" onClick={() => setPickerYear((y) => y + 1)}><ChevronRight size={14} /></button>
                   </div>
                   <div className="month-picker-grid">
-                    {MONTH_ABBR.map((m, i) => (
+                    {MA().map((m, i) => (
                       <button
                         key={m}
                         className={`month-picker-cell ${pickerYear === calCursor.year && i === calCursor.month ? "month-picker-cell--selected" : ""}`}
@@ -4320,20 +4660,20 @@ export default function TaskApp() {
               )}
             </div>
             <div className="cal-nav">
-              <button className="cal-nav-btn" onClick={() => goPrevNext(-1)} title="Anterior (RePág)"><ChevronLeft size={16} /></button>
-              <button className="cal-today-btn" onClick={goToday} title="Ir a hoy (T)">Hoy</button>
-              <button className="cal-nav-btn" onClick={() => goPrevNext(1)} title="Siguiente (AvPág)"><ChevronRight size={16} /></button>
+              <button className="cal-nav-btn" onClick={() => goPrevNext(-1)} title={tr("Anterior (RePág)")}><ChevronLeft size={16} /></button>
+              <button className="cal-today-btn" onClick={goToday} title={tr("Ir a hoy (T)")}>{tr("Hoy")}</button>
+              <button className="cal-nav-btn" onClick={() => goPrevNext(1)} title={tr("Siguiente (AvPág)")}><ChevronRight size={16} /></button>
             </div>
             <div className="cal-toolbar-spacer" />
             <button
               className="cal-new-event"
               onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); openEventEditor({ start: selectedDay, end: selectedDay }, r.left - 120, r.bottom); }}
-              title="Nuevo evento (también podés arrastrar sobre los días)"
+              title={tr("Nuevo evento (también podés arrastrar sobre los días)")}
             >
-              <Plus size={14} /> Evento
+              <Plus size={14} />{" "}{tr("Evento")}
             </button>
             <div className="cal-view-switch" role="tablist">
-              {[["mes", "Mes", "M"], ["semana", "Semana", "S"], ["dia", "Día", "D"]].map(([k, label, key]) => (
+              {[["mes", tr("Mes"), "M"], ["semana", tr("Semana"), "S"], ["dia", tr("Día"), "D"]].map(([k, label, key]) => (
                 <button key={k} role="tab" aria-selected={calView === k} className={`seg-btn ${calView === k ? "seg-btn--active" : ""}`} onClick={() => switchCalView(k)} title={`${label} (${key})`}>{label}</button>
               ))}
             </div>
@@ -4366,10 +4706,10 @@ export default function TaskApp() {
                             {...dayCellHandlers(cell.iso)}
                           >
                             <div className="cal-cell-head">
-                              <span className="cal-cell-num">{cell.day === 1 && !cell.inMonth ? `${cell.day} ${MONTH_ABBR[Number(cell.iso.slice(5, 7)) - 1].toLowerCase()}` : cell.day}</span>
+                              <span className="cal-cell-num">{cell.day === 1 && !cell.inMonth ? (CUR_LANG === "en" ? `${MA()[Number(cell.iso.slice(5, 7)) - 1]} 1` : `${cell.day} ${MA()[Number(cell.iso.slice(5, 7)) - 1].toLowerCase()}`) : cell.day}</span>
                               <button
                                 className="cal-cell-add"
-                                title="Agregar tarea"
+                                title={tr("Agregar tarea")}
                                 onClick={(e) => { e.stopPropagation(); focusDay(cell.iso); setCalAddDay(cell.iso); setCalAddText(""); }}
                               ><Plus size={13} /></button>
                             </div>
@@ -4377,7 +4717,7 @@ export default function TaskApp() {
                             <div className="cal-cell-tasks">
                               {shown.map((t) => renderCalChip(t))}
                               {hidden > 0 && (
-                                <button className="cal-more" onClick={(e) => openCalDayPopover(e, cell.iso)}>{hidden} más</button>
+                                <button className="cal-more" onClick={(e) => openCalDayPopover(e, cell.iso)}>{tr("{n} más", { n: hidden })}</button>
                               )}
                               {renderCalInlineAdd(cell.iso)}
                             </div>
@@ -4420,7 +4760,7 @@ export default function TaskApp() {
                       {renderCalInlineAdd(d.iso)}
                       {calAddDay !== d.iso && (
                         <button className="cal-week-add" onClick={(e) => { e.stopPropagation(); focusDay(d.iso); setCalAddDay(d.iso); setCalAddText(""); }}>
-                          <Plus size={13} /> Agregar
+                          <Plus size={13} />{" "}{tr("Agregar")}
                         </button>
                       )}
                     </div>
@@ -4448,12 +4788,14 @@ export default function TaskApp() {
                   <div>
                     <div className="cal-day-hero-wd">{rel || weekdayFullOf(selectedDay)}</div>
                     <div className="cal-day-hero-sub">
-                      {`${Number(selectedDay.slice(8))} de ${MONTH_LABELS[Number(selectedDay.slice(5, 7)) - 1].toLowerCase()} de ${selectedDay.slice(0, 4)}`}
+                      {CUR_LANG === "en"
+                        ? `${ML()[Number(selectedDay.slice(5, 7)) - 1]} ${Number(selectedDay.slice(8))}, ${selectedDay.slice(0, 4)}`
+                        : `${Number(selectedDay.slice(8))} de ${ML()[Number(selectedDay.slice(5, 7)) - 1].toLowerCase()} de ${selectedDay.slice(0, 4)}`}
                       {holidayName && <span className="cal-day-hero-holiday">{holidayName}</span>}
                     </div>
                   </div>
                   <span style={{ flex: 1 }} />
-                  <span className="cal-day-hero-count">{pending.length} {pending.length === 1 ? "pendiente" : "pendientes"}</span>
+                  <span className="cal-day-hero-count">{pending.length === 1 ? tr("1 pendiente") : tr("{n} pendientes", { n: pending.length })}</span>
                 </div>
                 {eventsOn(selectedDay).length > 0 && (
                   <div className="cal-day-events">
@@ -4469,7 +4811,7 @@ export default function TaskApp() {
                         >
                           <span className="ev-row-bar" />
                           <span className="ev-row-title">{ev.title}</span>
-                          <span className="ev-row-meta">{total > 1 ? `Día ${nth} de ${total} · ${eventSpanLabel(ev)}` : "Todo el día"}</span>
+                          <span className="ev-row-meta">{total > 1 ? `${tr("Día {n} de {total}", { n: nth, total })} · ${eventSpanLabel(ev)}` : tr("Todo el día")}</span>
                         </button>
                       );
                     })}
@@ -4479,7 +4821,7 @@ export default function TaskApp() {
                   <Plus size={16} />
                   <input
                     type="text"
-                    placeholder={`Agregar tarea para ${rel ? rel.toLowerCase() : "este día"}`}
+                    placeholder={tr("Agregar tarea para {when}", { when: rel ? rel.toLowerCase() : tr("este día") })}
                     value={dayQuickTitle}
                     onChange={(e) => setDayQuickTitle(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addTaskForFocusedDay()}
@@ -4487,22 +4829,22 @@ export default function TaskApp() {
                 </div>
                 <div className="cal-day-list">
                   {pending.length === 0 && done.length === 0 && (
-                    <div className="cal-day-empty">Nada agendado. Agregá una tarea arriba o arrastrá una desde "Sin fecha".</div>
+                    <div className="cal-day-empty">{tr("Nada agendado. Agregá una tarea arriba o arrastrá una desde \"Sin fecha\".")}</div>
                   )}
                   {pending.map((t) => renderAgendaRow(t, { big: true }))}
-                  {done.length > 0 && <div className="cal-day-subhead">Hechas</div>}
+                  {done.length > 0 && <div className="cal-day-subhead">{tr("Hechas")}</div>}
                   {done.map((t) => renderAgendaRow(t, { big: true }))}
                 </div>
                 {showOverdue && (
                   <div className="cal-day-overdue">
                     <div className="cal-day-subhead cal-day-subhead--bad">
-                      Atrasadas <span>{overdueBeforeToday.length}</span>
+                      {tr("Atrasadas")}{" "}<span>{overdueBeforeToday.length}</span>
                       <span style={{ flex: 1 }} />
                       <button
                         className="cal-pop-btn"
-                        onClick={() => { overdueBeforeToday.forEach((t) => setDate(t.id, today)); showToast(`${overdueBeforeToday.length} pasadas a hoy`); }}
+                        onClick={() => { overdueBeforeToday.forEach((t) => setDate(t.id, today)); showToast(tr("{n} pasadas a hoy", { n: overdueBeforeToday.length })); }}
                       >
-                        <ArrowRight size={13} /> Pasar todas a hoy
+                        <ArrowRight size={13} />{" "}{tr("Pasar todas a hoy")}
                       </button>
                     </div>
                     {overdueBeforeToday.map((t) => renderAgendaRow(t, { big: true, showDate: true }))}
@@ -4513,7 +4855,7 @@ export default function TaskApp() {
           })()}
 
           <div className="cal-footer-hint">
-            Arrastrá sobre varios días para crear un evento · doble clic para una tarea · arrastrá tareas y eventos para moverlos · T para hoy
+            {tr("Arrastrá sobre varios días para crear un evento · doble clic para una tarea · arrastrá tareas y eventos para moverlos · T para hoy")}
           </div>
         </div>
         {renderCalSidePanel()}
@@ -4530,12 +4872,12 @@ export default function TaskApp() {
         {showHeader && (
           <thead>
             <tr>
-              <th>Tarea</th>
-              {showArea && <th>Área</th>}
-              <th className="col-center">Detalle</th>
-              <th className="col-center">Estado</th>
-              <th className="col-center">Prioridad</th>
-              <th className="col-center">Fecha</th>
+              <th>{tr("Tarea")}</th>
+              {showArea && <th>{tr("Área")}</th>}
+              <th className="col-center">{tr("Detalle")}</th>
+              <th className="col-center">{tr("Estado")}</th>
+              <th className="col-center">{tr("Prioridad")}</th>
+              <th className="col-center">{tr("Fecha")}</th>
               <th></th>
             </tr>
           </thead>
@@ -4613,7 +4955,7 @@ export default function TaskApp() {
                       <span className="note-text">{t.note}</span>
                     </button>
                   ) : (
-                    <button className="note-btn" onClick={() => setEditingNoteId(t.id)}>+ nota</button>
+                    <button className="note-btn" onClick={() => setEditingNoteId(t.id)}>{tr("+ nota")}</button>
                   )}
                 </td>
                 <td className="col-center"><StatusPill value={t.status} onClick={() => cycleStatus(t.id)} /></td>
@@ -4639,7 +4981,7 @@ export default function TaskApp() {
     return (
       <div className="tt-root boot-screen">
         <style>{BOOT_STYLES}</style>
-        <div className="boot-msg mono">Cargando...</div>
+        <div className="boot-msg mono">{tr("Cargando...")}</div>
       </div>
     );
   }
@@ -4654,7 +4996,7 @@ export default function TaskApp() {
           <input
             type="email"
             className="auth-input"
-            placeholder="Email"
+            placeholder={tr("Email")}
             value={authEmail}
             onChange={(e) => setAuthEmail(e.target.value)}
             autoFocus
@@ -4662,7 +5004,7 @@ export default function TaskApp() {
           <input
             type="password"
             className="auth-input"
-            placeholder="Contraseña"
+            placeholder={tr("Contraseña")}
             value={authPassword}
             onChange={(e) => setAuthPassword(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && (authView === "login" ? handleEmailSignIn() : handleEmailSignUp())}
@@ -4672,22 +5014,22 @@ export default function TaskApp() {
           {authNotice && <div className="auth-notice">{authNotice}</div>}
 
           <button className="auth-btn" disabled={authBusy} onClick={authView === "login" ? handleEmailSignIn : handleEmailSignUp}>
-            {authBusy ? "Un momento..." : authView === "login" ? "Ingresar" : "Crear cuenta"}
+            {authBusy ? tr("Un momento...") : authView === "login" ? tr("Ingresar") : tr("Crear cuenta")}
           </button>
 
           <button
             className="auth-switch"
             onClick={() => { setAuthView(authView === "login" ? "signup" : "login"); setAuthError(""); setAuthNotice(""); }}
           >
-            {authView === "login" ? "¿No tenés cuenta? Creá una" : "¿Ya tenés cuenta? Ingresá"}
+            {authView === "login" ? tr("¿No tenés cuenta? Creá una") : tr("¿Ya tenés cuenta? Ingresá")}
           </button>
 
-          <div className="auth-divider"><span>o</span></div>
+          <div className="auth-divider"><span>{tr("o")}</span></div>
 
           <button className="auth-guest-btn" disabled={authBusy} onClick={handleGuestLogin}>
-            Probar sin cuenta
+            {tr("Probar sin cuenta")}
           </button>
-          <p className="auth-guest-hint">Entrás directo, sin registrarte. Tus datos quedan atados a este navegador.</p>
+          <p className="auth-guest-hint">{tr("Entrás directo, sin registrarte. Tus datos quedan atados a este navegador.")}</p>
         </div>
       </div>
     );
@@ -4700,12 +5042,12 @@ export default function TaskApp() {
         <div className="auth-card">
           <div className="brand"><span className="brand-dot" />Task App</div>
           <div className="modal-text" style={{ marginBottom: 16 }}>
-            Tus datos están cifrados. Ingresá tu contraseña de cifrado para desbloquearlos.
+            {tr("Tus datos están cifrados. Ingresá tu contraseña de cifrado para desbloquearlos.")}
           </div>
           <input
             type="password"
             className="auth-input"
-            placeholder="Contraseña de cifrado"
+            placeholder={tr("Contraseña de cifrado")}
             value={encPass}
             onChange={(e) => setEncPass(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleEncUnlock()}
@@ -4713,7 +5055,7 @@ export default function TaskApp() {
           />
           {encError && <div className="auth-error">{encError}</div>}
           <button className="auth-btn" disabled={encBusy} onClick={handleEncUnlock}>
-            {encBusy ? "Desbloqueando..." : "Desbloquear"}
+            {encBusy ? tr("Desbloqueando...") : tr("Desbloquear")}
           </button>
         </div>
       </div>
@@ -4923,7 +5265,7 @@ export default function TaskApp() {
         .sync-indicator--error { color: var(--alta) !important; border-color: rgba(242,95,85,0.4) !important; }
         .m-fav-btn--active { color: var(--amber) !important; border-color: rgba(242,171,67,0.4) !important; }
         .sync-indicator:hover { color: var(--text-dim); border-color: var(--border); }
-        .lang-select { width: auto; padding: 0 6px 0 9px; cursor: pointer; font-size: 12px; font-weight: 650; }
+        .lang-select { width: 66px; flex-shrink: 0; padding: 0 8px; cursor: pointer; font-size: 12.5px; font-weight: 400; }
 
         .bell-wrap { position: relative; display: inline-flex; }
         .bell-dot { position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--alta); border: 1.5px solid var(--surface); }
@@ -5911,39 +6253,39 @@ export default function TaskApp() {
       <aside className="sidebar">
         <div className="brand"><span className="brand-dot" />Task App</div>
 
-        <div className="side-label">VISTAS</div>
+        <div className="side-label">{tr("VISTAS")}</div>
         <div className={`side-item ${view === "lista" ? "side-item--active" : ""}`} onClick={() => setView("lista")}>
-          <span className="side-item-left"><ListIcon size={14} /> Lista</span>
+          <span className="side-item-left"><ListIcon size={14} />{" "}{tr("Lista")}</span>
         </div>
         <div className={`side-item ${view === "prioridad" ? "side-item--active" : ""}`} onClick={() => setView("prioridad")}>
-          <span className="side-item-left"><Flag size={14} /> Por prioridad</span>
+          <span className="side-item-left"><Flag size={14} />{" "}{tr("Por prioridad")}</span>
         </div>
         <div className={`side-item ${view === "calendario" ? "side-item--active" : ""}`} onClick={() => setView("calendario")}>
-          <span className="side-item-left"><CalendarIcon size={14} /> Calendario</span>
+          <span className="side-item-left"><CalendarIcon size={14} />{" "}{tr("Calendario")}</span>
         </div>
         <div className="side-divider" />
         <div className={`side-item ${view === "eventos" ? "side-item--active" : ""}`} onClick={() => setView("eventos")}>
-          <span className="side-item-left"><CalendarRange size={14} /> Eventos</span>
+          <span className="side-item-left"><CalendarRange size={14} />{" "}{tr("Eventos")}</span>
           {eventGroups().now.length + eventGroups().next.length > 0 && <span className="side-count mono">{eventGroups().now.length + eventGroups().next.length}</span>}
         </div>
         <div
           className={`side-item side-item--notes ${view === "notas" ? "side-item--active" : ""} ${taskDragActive ? "side-item--droppable" : ""} ${draggingToNotes ? "side-item--dropping" : ""}`}
           onClick={() => setView("notas")}
-          title="Arrastrá una tarea acá para guardarla como nota"
+          title={tr("Arrastrá una tarea acá para guardarla como nota")}
           {...notesDropProps()}
         >
-          <span className="side-item-left"><StickyNote size={14} /> Notas</span>
-          {taskDragActive ? <span className="side-drop-hint">Soltá acá</span> : notes.length > 0 && <span className="side-count mono">{notes.length}</span>}
+          <span className="side-item-left"><StickyNote size={14} />{" "}{tr("Notas")}</span>
+          {taskDragActive ? <span className="side-drop-hint">{tr("Soltá acá")}</span> : notes.length > 0 && <span className="side-count mono">{notes.length}</span>}
         </div>
 
         <div className="side-divider" />
         <div className="side-label-row">
-          <span className="side-label">ÁREAS</span>
+          <span className="side-label">{tr("ÁREAS")}</span>
         </div>
         <div className={`side-item ${selectedAreaId === "all" ? "side-item--active" : ""}`} onClick={() => selectArea("all")}>
           <span className="side-item-left">
             <span className="side-dot" style={{ background: "var(--text-faint)" }} />
-            <span className="side-item-name">Todas</span>
+            <span className="side-item-name">{tr("Todas")}</span>
           </span>
           <span className="side-count mono">{tasks.filter((t) => t.status !== "Hecho").length}</span>
         </div>
@@ -5972,7 +6314,7 @@ export default function TaskApp() {
                       className="side-dot"
                       style={{ background: a.color }}
                       onClick={(e) => { e.stopPropagation(); setColorPickerAreaId(colorPickerAreaId === a.id ? null : a.id); }}
-                      title="Cambiar color"
+                      title={tr("Cambiar color")}
                     />
                     {colorPickerAreaId === a.id && (
                       <>
@@ -5993,7 +6335,7 @@ export default function TaskApp() {
                   <button
                     className={`fav-star-btn ${a.favorite ? "fav-star-btn--active" : ""}`}
                     onClick={(e) => { e.stopPropagation(); toggleAreaFavorite(a.id); }}
-                    title={a.favorite ? "Quitar de favoritos" : "Marcar como favorita"}
+                    title={a.favorite ? tr("Quitar de favoritos") : tr("Marcar como favorita")}
                   >
                     <Star size={13} fill={a.favorite ? "currentColor" : "none"} />
                   </button>
@@ -6003,10 +6345,10 @@ export default function TaskApp() {
                   <span className="side-count mono">{areaCounts[a.id] || 0}</span>
                   {!isGeneralArea(a) && (
                     <>
-                      <button className="area-edit-btn" title="Renombrar área" onClick={(e) => { e.stopPropagation(); startRename(a); }}>
+                      <button className="area-edit-btn" title={tr("Renombrar área")} onClick={(e) => { e.stopPropagation(); startRename(a); }}>
                         <Pencil size={12} />
                       </button>
-                      <button className="area-edit-btn area-edit-btn--danger" title="Eliminar área" onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "area", id: a.id }); }}>
+                      <button className="area-edit-btn area-edit-btn--danger" title={tr("Eliminar área")} onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "area", id: a.id }); }}>
                         <Trash2 size={12} />
                       </button>
                     </>
@@ -6021,35 +6363,35 @@ export default function TaskApp() {
           <input
             ref={newAreaInputRef}
             className="new-area-input"
-            placeholder="Nombre del área..."
+            placeholder={tr("Nombre del área...")}
             value={newAreaName}
             onChange={(e) => setNewAreaName(e.target.value)}
             onBlur={discardNewArea}
             onKeyDown={(e) => { if (e.key === "Enter") createArea(); if (e.key === "Escape") { setNewAreaName(""); setAddingArea(false); } }}
           />
         ) : (
-          <button className="add-area-btn" onClick={() => setAddingArea(true)}><Plus size={13} /> Nueva área</button>
+          <button className="add-area-btn" onClick={() => setAddingArea(true)}><Plus size={13} />{" "}{tr("Nueva área")}</button>
         )}
 
         <div className="sidebar-spacer" />
 
         <div className="account-row">
           <div className="account-info">
-            <div className="account-name">{session?.user?.is_anonymous ? "Invitado" : (maskEmail(session?.user?.email))}</div>
-            <div className="account-sub">{session?.user?.is_anonymous ? "Sesión de prueba" : "Con cuenta"}</div>
+            <div className="account-name">{session?.user?.is_anonymous ? tr("Invitado") : (maskEmail(session?.user?.email))}</div>
+            <div className="account-sub">{session?.user?.is_anonymous ? tr("Sesión de prueba") : tr("Con cuenta")}</div>
           </div>
-          <button className="account-logout" onClick={handleLogout} title="Cerrar sesión">Salir</button>
+          <button className="account-logout" onClick={handleLogout} title={tr("Cerrar sesión")}>{tr("Salir")}</button>
         </div>
 
         <div className="notif-toggle-row">
           <div>
-            <div className="notif-toggle-title">Notificaciones</div>
-            <div className="notif-toggle-sub">{notificationsEnabled ? "Activas · cada hora" : "Apagadas"}</div>
+            <div className="notif-toggle-title">{tr("Notificaciones")}</div>
+            <div className="notif-toggle-sub">{notificationsEnabled ? tr("Activas · cada hora") : tr("Apagadas")}</div>
           </div>
           <button
             className={`switch ${notificationsEnabled ? "switch--on" : ""}`}
             onClick={() => setNotificationsEnabled((v) => !v)}
-            title="Activar/desactivar notificaciones"
+            title={tr("Activar/desactivar notificaciones")}
           >
             <span className="switch-knob" />
           </button>
@@ -6061,47 +6403,47 @@ export default function TaskApp() {
         <div className="topbar">
           <h1>
             {view === "calendario"
-              ? "Calendario"
+              ? tr("Calendario")
               : view === "notas"
-              ? "Notas"
+              ? tr("Notas")
               : view === "eventos"
-              ? "Eventos"
+              ? tr("Eventos")
               : view === "prioridad"
-                ? "Por prioridad"
+                ? tr("Por prioridad")
                 : selectedAreaId === "all"
-                  ? "Todas las tareas"
+                  ? tr("Todas las tareas")
                   : (selectedProjectId ? areaMap[selectedAreaId]?.projects?.find((p) => p.id === selectedProjectId)?.name : areaMap[selectedAreaId]?.name)}
           </h1>
           <button
             className={`counter counter--clickable ${desktopExpandedFilter === "pendientes" ? "counter--active" : ""}`}
             onClick={() => toggleDesktopExpandedFilter("pendientes")}
           >
-            <span>Pendientes</span><b>{pendientes}</b>
+            <span>{tr("Pendientes")}</span><b>{pendientes}</b>
           </button>
           <button
             className={`counter counter--clickable ${vencidas > 0 ? "counter--warn" : ""} ${desktopExpandedFilter === "vencidas" ? "counter--active" : ""}`}
             onClick={() => toggleDesktopExpandedFilter("vencidas")}
           >
-            <span>Vencidas</span><b>{vencidas}</b>
+            <span>{tr("Vencidas")}</span><b>{vencidas}</b>
           </button>
           <div className="search-wrap">
             <Search size={13} color="var(--text-faint)" />
-            <input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input placeholder={tr("Buscar...")} value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <button
             className={`iconbtn fav-filter-btn ${areaFilterMode !== "off" ? "fav-filter-btn--active" : ""}`}
             onClick={() => setAreaFilterMode((m) => (m === "off" ? "solo" : m === "solo" ? "mute" : "off"))}
-            title={areaFilterMode === "solo" ? "Mostrando solo favoritas — clic para ocultarlas" : areaFilterMode === "mute" ? "Ocultando favoritas — clic para apagar el filtro" : "Filtro de favoritas (apagado)"}
+            title={areaFilterMode === "solo" ? tr("Mostrando solo favoritas — clic para ocultarlas") : areaFilterMode === "mute" ? tr("Ocultando favoritas — clic para apagar el filtro") : tr("Filtro de favoritas (apagado)")}
           >
             {areaFilterMode === "mute" ? <EyeOff size={13} /> : <Star size={13} fill={areaFilterMode === "solo" ? "currentColor" : "none"} />}
-            Favoritos
+            {tr("Favoritos")}
           </button>
           <div className="topbar-spacer" />
-          <IconBtn icon={hideCompleted ? CheckCircle2 : Circle} label="Ocultar hechas" onClick={() => setHideCompleted((v) => !v)} active={hideCompleted} />
+          <IconBtn icon={hideCompleted ? CheckCircle2 : Circle} label={tr("Ocultar hechas")} onClick={() => setHideCompleted((v) => !v)} active={hideCompleted} />
           <span className="bell-wrap">
             <button
               className="iconbtn icon-only"
-              title="Notificaciones"
+              title={tr("Notificaciones")}
               onClick={() => setShowNotifPanel((v) => !v)}
             >
               <Bell size={14} />
@@ -6112,12 +6454,12 @@ export default function TaskApp() {
                 <div className="popover-scrim" onClick={() => setShowNotifPanel(false)} />
                 <div className="notif-panel" onClick={(e) => e.stopPropagation()}>
                   <div className="notif-panel-head">
-                    <span>Alertas</span>
+                    <span>{tr("Alertas")}</span>
                     <span className="notif-panel-count mono">{urgentItems.length}</span>
                   </div>
                   <div className="notif-panel-list">
                     {urgentItems.length === 0 && (
-                      <div className="notif-panel-empty">Sin vencimientos ni alertas por ahora.</div>
+                      <div className="notif-panel-empty">{tr("Sin vencimientos ni alertas por ahora.")}</div>
                     )}
                     {urgentItems.map((item) => (
                       <button className="notif-row" key={item.key} onClick={() => goToAlert(item)}>
@@ -6138,24 +6480,24 @@ export default function TaskApp() {
           <button
             className="iconbtn icon-only"
             onClick={() => setShowEncSettings(true)}
-            title={isEncrypted ? "Datos cifrados — ver cifrado" : "Datos sin cifrar — ver cifrado"}
+            title={isEncrypted ? tr("Datos cifrados — ver cifrado") : tr("Datos sin cifrar — ver cifrado")}
           >
             {isEncrypted ? <Lock size={14} /> : <Unlock size={14} />}
           </button>
-          <button className="iconbtn icon-only" onClick={() => setShowSettingsPanel(true)} title="Configuración">
+          <button className="iconbtn icon-only" onClick={() => setShowSettingsPanel(true)} title={tr("Configuración")}>
             <Settings size={14} />
           </button>
           <span
             className={`iconbtn icon-only sync-indicator ${syncError ? "sync-indicator--error" : ""}`}
             onClick={() => { if (syncError) saveDiff(); }}
             style={syncError ? { cursor: "pointer" } : undefined}
-            title={syncError ? "No se pudo guardar — tocá para reintentar" : saving ? "Guardando..." : lastSyncAt ? `Sincronizado — ${new Date(lastSyncAt).toLocaleTimeString("es-AR")}` : "Conectado a Supabase"}
+            title={syncError ? tr("No se pudo guardar — tocá para reintentar") : saving ? tr("Guardando...") : lastSyncAt ? `${tr("Sincronizado")} — ${new Date(lastSyncAt).toLocaleTimeString(appLang === "en" ? "en-US" : "es-AR")}` : tr("Conectado a Supabase")}
           >
             {syncError ? <CloudOff size={14} /> : saving ? <RefreshCw size={14} className="spin" /> : <Cloud size={14} />}
           </span>
-          <select className="iconbtn lang-select" value={appLang} onChange={(e) => setAppLang(e.target.value)} title="Idioma">
-            <option value="es">ES</option>
-            <option value="en">EN</option>
+          <select className="iconbtn lang-select" value={appLang} onChange={(e) => setAppLang(e.target.value)} title={tr("Idioma")}>
+            <option value="es">ESP</option>
+            <option value="en">ENG</option>
           </select>
         </div>
 
@@ -6163,8 +6505,8 @@ export default function TaskApp() {
           <>
             <div className="input-card">
               <div className="tabs">
-                <button className={`tab-btn ${tab === "texto" ? "tab-btn--active" : ""}`} onClick={() => setTab("texto")}>Texto libre</button>
-                <button className={`tab-btn ${tab === "form" ? "tab-btn--active" : ""}`} onClick={() => setTab("form")}>Formulario</button>
+                <button className={`tab-btn ${tab === "texto" ? "tab-btn--active" : ""}`} onClick={() => setTab("texto")}>{tr("Texto libre")}</button>
+                <button className={`tab-btn ${tab === "form" ? "tab-btn--active" : ""}`} onClick={() => setTab("form")}>{tr("Formulario")}</button>
               </div>
 
               {tab === "texto" ? (
@@ -6172,7 +6514,7 @@ export default function TaskApp() {
                   <div className="input-body">
                     <textarea
                       rows={1}
-                      placeholder="Escribí todo lo que tenés en la cabeza... ej: reunión jueves urgente wanka moria, cortar pasto finde casa"
+                      placeholder={tr("Escribí todo lo que tenés en la cabeza... ej: reunión jueves urgente wanka moria, cortar pasto finde casa")}
                       value={freeText}
                       onChange={(e) => setFreeText(e.target.value)}
                       onKeyDown={(e) => {
@@ -6184,26 +6526,26 @@ export default function TaskApp() {
                     />
                     <button className="procesar-btn" onClick={handleProcesar} disabled={!freeText.trim()}>
                       <ListChecks size={14} />
-                      Procesar
+                      {tr("Procesar")}
                     </button>
                   </div>
                   <div className="hint-text">
-                    Enter procesa · Shift+Enter agrega una línea. Se interpreta en el momento, sin IA: "hoy" / "mañana" / "el jueves" / "finde" → fecha. "urgente" o "rápido" → prioridad alta.
-                    {selectedAreaId !== "all" && <> Las tareas se crean en <b style={{ color: "var(--text-dim)" }}>{areaMap[selectedAreaId]?.name}</b>{selectedProjectId ? ` / ${areaMap[selectedAreaId]?.projects?.find((p) => p.id === selectedProjectId)?.name}` : ""}.</>}
+                    {tr("Enter procesa · Shift+Enter agrega una línea. Se interpreta en el momento, sin IA: \"hoy\" / \"mañana\" / \"el jueves\" / \"finde\" → fecha. \"urgente\" o \"rápido\" → prioridad alta.")}
+                    {selectedAreaId !== "all" && <> {tr("Las tareas se crean en")} <b style={{ color: "var(--text-dim)" }}>{areaMap[selectedAreaId]?.name}</b>{selectedProjectId ? ` / ${areaMap[selectedAreaId]?.projects?.find((p) => p.id === selectedProjectId)?.name}` : ""}.</>}
                   </div>
                 </>
               ) : (
                 <div className="manual-form">
                   <input
                     type="text"
-                    placeholder="Título de la tarea"
+                    placeholder={tr("Título de la tarea")}
                     value={manualTitle}
                     onChange={(e) => setManualTitle(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addManualTask()}
                   />
                   {selectedAreaId === "all" ? (
                     <select value={manualArea} onChange={(e) => setManualArea(e.target.value)}>
-                      <option value="">General</option>
+                      <option value="">{tr("General")}</option>
                       {visibleOrderedAreas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   ) : (
@@ -6214,11 +6556,11 @@ export default function TaskApp() {
                   )}
                   {selectedAreaId !== "all" && areaMap[selectedAreaId]?.projects?.length > 0 && (
                     <select value={manualProjectId} onChange={(e) => setManualProjectId(e.target.value)}>
-                      <option value="">Sin proyecto</option>
+                      <option value="">{tr("Sin proyecto")}</option>
                       {areaMap[selectedAreaId].projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   )}
-                  <button className="procesar-btn" onClick={addManualTask}><Plus size={14} />Agregar</button>
+                  <button className="procesar-btn" onClick={addManualTask}><Plus size={14} />{tr("Agregar")}</button>
                 </div>
               )}
             </div>
@@ -6231,14 +6573,14 @@ export default function TaskApp() {
                       desktopExpandedFilter === "vencidas" ? isOverdue(t.date, t.status) : t.status !== "Hecho"
                     ));
                     return isolated.length === 0 ? (
-                      <div className="empty-state">Sin tareas {desktopExpandedFilter === "vencidas" ? "vencidas" : "pendientes"}.</div>
+                      <div className="empty-state">{desktopExpandedFilter === "vencidas" ? tr("Sin tareas vencidas.") : tr("Sin tareas pendientes.")}</div>
                     ) : renderTaskTable(isolated, { showArea: true, showHeader: true });
                   })()}
                 </>
               ) : (
               <>
               {grouped.length === 0 && (
-                <div className="empty-state">No hay tareas para mostrar. Escribí algo arriba y tocá "Procesar".</div>
+                <div className="empty-state">{tr("No hay tareas para mostrar. Escribí algo arriba y tocá \"Procesar\".")}</div>
               )}
               {grouped.map(({ area, allTasks, noProject, projectGroups }) => {
                 const isCollapsed = collapsed[area.id];
@@ -6253,7 +6595,7 @@ export default function TaskApp() {
                     >
                       <div className="group-bar" style={{ background: area.color }} />
                       <div className="group-name">{area.name}</div>
-                      <div className="group-count mono">{allTasks.filter((t) => t.status !== "Hecho").length} pendientes</div>
+                      <div className="group-count mono">{tr("{n} pendientes", { n: allTasks.filter((t) => t.status !== "Hecho").length })}</div>
                       <span className="chev">{isCollapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}</span>
                     </div>
                     {!isCollapsed && (
@@ -6262,11 +6604,11 @@ export default function TaskApp() {
                           {colGroupFor(false)}
                           <thead>
                             <tr>
-                              <th>Tarea</th>
-                              <th className="col-center">Detalle</th>
-                              <th className="col-center">Estado</th>
-                              <th className="col-center">Prioridad</th>
-                              <th className="col-center">Fecha</th>
+                              <th>{tr("Tarea")}</th>
+                              <th className="col-center">{tr("Detalle")}</th>
+                              <th className="col-center">{tr("Estado")}</th>
+                              <th className="col-center">{tr("Prioridad")}</th>
+                              <th className="col-center">{tr("Fecha")}</th>
                               <th></th>
                             </tr>
                           </thead>
@@ -6299,10 +6641,10 @@ export default function TaskApp() {
                               <span className="subgroup-name" style={{ color: area.color }}>{project.name.toUpperCase()}</span>
                               <span className="subgroup-count mono">{projTasks.filter((t) => t.status !== "Hecho").length}</span>
                               <span className="subgroup-actions">
-                                <button className="subgroup-action-btn" onClick={(e) => { e.stopPropagation(); startRenameProject(area.id, project); }} title="Renombrar proyecto">
+                                <button className="subgroup-action-btn" onClick={(e) => { e.stopPropagation(); startRenameProject(area.id, project); }} title={tr("Renombrar proyecto")}>
                                   <Pencil size={13} />
                                 </button>
-                                <button className="subgroup-action-btn" onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "project", id: project.id, areaId: area.id }); }} title="Eliminar proyecto">
+                                <button className="subgroup-action-btn" onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "project", id: project.id, areaId: area.id }); }} title={tr("Eliminar proyecto")}>
                                   <Trash2 size={13} />
                                 </button>
                               </span>
@@ -6339,7 +6681,7 @@ export default function TaskApp() {
                               <input
                                 ref={panelNewProjectInputRef}
                                 className="panel-new-project-input"
-                                placeholder="Nombre del nuevo proyecto..."
+                                placeholder={tr("Nombre del nuevo proyecto...")}
                                 value={panelNewProjectName}
                                 onChange={(e) => setPanelNewProjectName(e.target.value)}
                                 onBlur={() => createProjectFromPanel(area.id)}
@@ -6350,7 +6692,7 @@ export default function TaskApp() {
                               />
                             ) : (
                               <button className="panel-add-project-btn" onClick={() => setPanelAddingProjectAreaId(area.id)}>
-                                <Plus size={13} /> Nuevo proyecto
+                                <Plus size={13} />{" "}{tr("Nuevo proyecto")}
                               </button>
                             )}
                           </div>
@@ -6366,7 +6708,7 @@ export default function TaskApp() {
                   <input
                     ref={panelNewAreaInputRef}
                     className="panel-new-area-input"
-                    placeholder="Nombre del área..."
+                    placeholder={tr("Nombre del área...")}
                     value={panelNewAreaName}
                     onChange={(e) => setPanelNewAreaName(e.target.value)}
                     onBlur={discardNewAreaFromPanel}
@@ -6377,7 +6719,7 @@ export default function TaskApp() {
                   />
                 ) : (
                   <button className="panel-add-area-btn" onClick={() => setPanelAddingArea(true)}>
-                    <Plus size={14} /> Nueva área
+                    <Plus size={14} />{" "}{tr("Nueva área")}
                   </button>
                 )
               )}
@@ -6395,8 +6737,8 @@ export default function TaskApp() {
                 <div className="group" key={key} style={{ "--chip": barColor }}>
                   <div className="group-head" onClick={() => toggleCollapse(key)}>
                     <div className="group-bar" style={{ background: barColor }} />
-                    <div className="group-name">{priority}</div>
-                    <div className="group-count mono">{priTasks.filter((t) => t.status !== "Hecho").length} pendientes</div>
+                    <div className="group-name">{tr(priority)}</div>
+                    <div className="group-count mono">{tr("{n} pendientes", { n: priTasks.filter((t) => t.status !== "Hecho").length })}</div>
                     <span className="chev">{isCollapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}</span>
                   </div>
                   {!isCollapsed && priTasks.length > 0 && renderTaskTable(priTasks, { showArea: true, showHeader: true })}
@@ -6424,24 +6766,24 @@ export default function TaskApp() {
         <div className="modal-overlay" onClick={closeEncSettings}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={closeEncSettings}><X size={16} /></button>
-            <div className="modal-title">Cifrado de extremo a extremo</div>
+            <div className="modal-title">{tr("Cifrado de extremo a extremo")}</div>
 
             {encSettingsView === "status" && (
               <>
                 <div className="modal-text">
                   {isEncrypted
-                    ? "Tus datos están cifrados en tu navegador antes de llegar a Supabase (AES-256-GCM). Ni Supabase ni nadie con acceso a la base puede leerlos."
-                    : "Tus datos se guardan en Supabase sin cifrar. Podés activar el cifrado de extremo a extremo cuando quieras."}
+                    ? tr("Tus datos están cifrados en tu navegador antes de llegar a Supabase (AES-256-GCM). Ni Supabase ni nadie con acceso a la base puede leerlos.")
+                    : tr("Tus datos se guardan en Supabase sin cifrar. Podés activar el cifrado de extremo a extremo cuando quieras.")}
                 </div>
                 <div className="modal-actions">
-                  <button className="modal-btn modal-btn--cancel" onClick={closeEncSettings}>Cerrar</button>
+                  <button className="modal-btn modal-btn--cancel" onClick={closeEncSettings}>{tr("Cerrar")}</button>
                   {isEncrypted ? (
                     <button className="modal-btn modal-btn--danger" onClick={() => setEncSettingsView("disable-confirm")}>
-                      Desactivar cifrado
+                      {tr("Desactivar cifrado")}
                     </button>
                   ) : (
                     <button className="modal-btn modal-btn--primary" onClick={() => setEncSettingsView("enable")}>
-                      Activar cifrado
+                      {tr("Activar cifrado")}
                     </button>
                   )}
                 </div>
@@ -6451,13 +6793,12 @@ export default function TaskApp() {
             {encSettingsView === "disable-confirm" && (
               <>
                 <div className="modal-text">
-                  Ingresá tu contraseña de cifrado actual para confirmar que querés desactivarlo.
-                  Una vez desactivado, tus datos quedan en texto plano en Supabase.
+                  {tr("Ingresá tu contraseña de cifrado actual para confirmar que querés desactivarlo. Una vez desactivado, tus datos quedan en texto plano en Supabase.")}
                 </div>
                 <input
                   type="password"
                   className="settings-input"
-                  placeholder="Contraseña de cifrado actual"
+                  placeholder={tr("Contraseña de cifrado actual")}
                   autoFocus
                   value={encPass}
                   onChange={(e) => setEncPass(e.target.value)}
@@ -6466,10 +6807,10 @@ export default function TaskApp() {
                 {encError && <div className="settings-error">{encError}</div>}
                 <div className="modal-actions">
                   <button className="modal-btn modal-btn--cancel" onClick={() => { setEncSettingsView("status"); setEncPass(""); setEncError(""); }}>
-                    Cancelar
+                    {tr("Cancelar")}
                   </button>
                   <button className="modal-btn modal-btn--danger" disabled={encBusy} onClick={handleDisableEncryption}>
-                    {encBusy ? "Verificando..." : "Confirmar y desactivar"}
+                    {encBusy ? tr("Verificando...") : tr("Confirmar y desactivar")}
                   </button>
                 </div>
               </>
@@ -6478,13 +6819,12 @@ export default function TaskApp() {
             {encSettingsView === "enable" && (
               <>
                 <div className="modal-text">
-                  Creá una contraseña de cifrado. Es distinta de tu contraseña de acceso y nunca sale de
-                  este navegador. Si la olvidás, no hay forma de recuperar los datos.
+                  {tr("Creá una contraseña de cifrado. Es distinta de tu contraseña de acceso y nunca sale de este navegador. Si la olvidás, no hay forma de recuperar los datos.")}
                 </div>
                 <input
                   type="password"
                   className="settings-input"
-                  placeholder="Contraseña de cifrado"
+                  placeholder={tr("Contraseña de cifrado")}
                   autoFocus
                   value={encPass}
                   onChange={(e) => setEncPass(e.target.value)}
@@ -6492,7 +6832,7 @@ export default function TaskApp() {
                 <input
                   type="password"
                   className="settings-input"
-                  placeholder="Repetí la contraseña"
+                  placeholder={tr("Repetí la contraseña")}
                   value={encPass2}
                   onChange={(e) => setEncPass2(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleEncSetup()}
@@ -6500,10 +6840,10 @@ export default function TaskApp() {
                 {encError && <div className="settings-error">{encError}</div>}
                 <div className="modal-actions">
                   <button className="modal-btn modal-btn--cancel" onClick={() => { setEncSettingsView("status"); setEncPass(""); setEncPass2(""); setEncError(""); }}>
-                    Cancelar
+                    {tr("Cancelar")}
                   </button>
                   <button className="modal-btn modal-btn--primary" disabled={encBusy} onClick={handleEncSetup}>
-                    {encBusy ? "Activando..." : "Activar cifrado"}
+                    {encBusy ? tr("Activando...") : tr("Activar cifrado")}
                   </button>
                 </div>
               </>
@@ -6516,81 +6856,93 @@ export default function TaskApp() {
         <div className="modal-overlay" onClick={() => { setShowSettingsPanel(false); setConfirmingWipe(false); }}>
           <div className="modal-card settings-modal-card" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => { setShowSettingsPanel(false); setConfirmingWipe(false); }}><X size={16} /></button>
-            <div className="modal-title">Configuración</div>
+            <div className="modal-title">{tr("Configuración")}</div>
 
             {!confirmingWipe ? (
               <>
-                <div className="settings-group-title">Seguridad</div>
+                <div className="settings-group-title">{tr("General")}</div>
                 <div className="settings-row">
                   <div>
-                    <div className="settings-row-title">Cifrado</div>
-                    <div className="settings-row-desc">{isEncrypted ? "Tus datos están cifrados." : "Tus datos no están cifrados."}</div>
+                    <div className="settings-row-title">{tr("Idioma")}</div>
+                    <div className="settings-row-desc">{tr("Idioma de la app.")}</div>
+                  </div>
+                  <select className="settings-select" value={appLang} onChange={(e) => setAppLang(e.target.value)}>
+                    <option value="es">ESP</option>
+                    <option value="en">ENG</option>
+                  </select>
+                </div>
+
+                <div className="settings-group-title">{tr("Seguridad")}</div>
+                <div className="settings-row">
+                  <div>
+                    <div className="settings-row-title">{tr("Cifrado")}</div>
+                    <div className="settings-row-desc">{isEncrypted ? tr("Tus datos están cifrados.") : tr("Tus datos no están cifrados.")}</div>
                   </div>
                   <button className="modal-btn modal-btn--cancel" onClick={() => { setShowSettingsPanel(false); setShowEncSettings(true); }}>
-                    {isEncrypted ? <Lock size={14} /> : <Unlock size={14} />} Ver cifrado
+                    {isEncrypted ? <Lock size={14} /> : <Unlock size={14} />} {tr("Ver cifrado")}
                   </button>
                 </div>
 
-                <div className="settings-group-title">Calendario</div>
+                <div className="settings-group-title">{tr("Calendario")}</div>
                 <div className="settings-row">
                   <div>
-                    <div className="settings-row-title">Inicio de semana</div>
-                    <div className="settings-row-desc">Orden de los días en el calendario.</div>
+                    <div className="settings-row-title">{tr("Inicio de semana")}</div>
+                    <div className="settings-row-desc">{tr("Orden de los días en el calendario.")}</div>
                   </div>
                   <select className="settings-select" value={weekStartsSunday ? "sun" : "mon"} onChange={(e) => setWeekStartsSunday(e.target.value === "sun")}>
-                    <option value="mon">Lunes (sáb/dom al final)</option>
-                    <option value="sun">Domingo</option>
+                    <option value="mon">{tr("Lunes (sáb/dom al final)")}</option>
+                    <option value="sun">{tr("Domingo")}</option>
                   </select>
                 </div>
                 <div className="settings-row">
                   <div>
-                    <div className="settings-row-title">Feriados en el calendario</div>
-                    <div className="settings-row-desc">Marca los feriados nacionales. En Argentina incluye también los móviles (Carnaval, Semana Santa, trasladables).</div>
+                    <div className="settings-row-title">{tr("Feriados en el calendario")}</div>
+                    <div className="settings-row-desc">{tr("Marca los feriados nacionales. En Argentina incluye también los móviles (Carnaval, Semana Santa, trasladables).")}</div>
                   </div>
                   <select className="settings-select" value={holidayCountry} onChange={(e) => setHolidayCountry(e.target.value)}>
-                    <option value="none">Ninguno</option>
-                    <option value="AR">Argentina</option>
-                    <option value="ES">España</option>
-                    <option value="MX">México</option>
-                    <option value="US">Estados Unidos</option>
-                    <option value="BR">Brasil</option>
-                    <option value="CL">Chile</option>
+                    <option value="none">{tr("Ninguno")}</option>
+                    <option value="AR">{tr("Argentina")}</option>
+                    <option value="ES">{tr("España")}</option>
+                    <option value="MX">{tr("México")}</option>
+                    <option value="US">{tr("Estados Unidos")}</option>
+                    <option value="BR">{tr("Brasil")}</option>
+                    <option value="CL">{tr("Chile")}</option>
                   </select>
                 </div>
 
-                <div className="settings-group-title">Datos</div>
+                <div className="settings-group-title">{tr("Datos")}</div>
                 <div className="settings-row">
                   <div>
-                    <div className="settings-row-title">Exportar / Restaurar</div>
-                    <div className="settings-row-desc">Backup manual, aparte de la nube.</div>
+                    <div className="settings-row-title">{tr("Exportar / Restaurar")}</div>
+                    <div className="settings-row-desc">{tr("Backup manual, aparte de la nube.")}</div>
                   </div>
                   <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                    <button className="modal-btn modal-btn--cancel" onClick={exportData}><Download size={13} /> Exportar</button>
-                    <button className="modal-btn modal-btn--cancel" onClick={() => restoreInputRef.current?.click()}><Upload size={13} /> Restaurar</button>
+                    <button className="modal-btn modal-btn--cancel" onClick={exportData}><Download size={13} />{" "}{tr("Exportar")}</button>
+                    <button className="modal-btn modal-btn--cancel" onClick={() => restoreInputRef.current?.click()}><Upload size={13} />{" "}{tr("Restaurar")}</button>
                   </div>
                 </div>
 
-                <div className="settings-group-title">Zona de riesgo</div>
+                <div className="settings-group-title">{tr("Zona de riesgo")}</div>
                 <div className="settings-row">
                   <div>
-                    <div className="settings-row-title">Borrar todos los datos</div>
-                    <div className="settings-row-desc">Borra todo. No se puede deshacer.</div>
+                    <div className="settings-row-title">{tr("Borrar todos los datos")}</div>
+                    <div className="settings-row-desc">{tr("Borra todo. No se puede deshacer.")}</div>
                   </div>
-                  <button className="modal-btn modal-btn--danger" onClick={() => setConfirmingWipe(true)}>Borrar todos los datos</button>
+                  <button className="modal-btn modal-btn--danger" onClick={() => setConfirmingWipe(true)}>{tr("Borrar todos los datos")}</button>
                 </div>
 
                 <div className="modal-actions">
-                  <button className="modal-btn modal-btn--cancel" onClick={() => setShowSettingsPanel(false)}>Cerrar</button>
+                  <button className="modal-btn modal-btn--cancel" onClick={() => setShowSettingsPanel(false)}>{tr("Cerrar")}</button>
                 </div>
               </>
             ) : (
               <>
                 <div className="modal-text">
-                  ¿Borrar <b style={{ color: "var(--alta)" }}>todas</b> tus áreas, proyectos, tareas, eventos y notas? Esta acción no se puede deshacer.
+                  {tr("¿Borrar")}{" "}<b style={{ color: "var(--alta)" }}>{tr("todas")}</b>{" "}{tr("tus áreas, proyectos, tareas, eventos y notas? Esta acción no se puede deshacer.")}
                 </div>
                 <div className="modal-actions">
-                  <button className="modal-btn modal-btn--cancel" onClick={() => setConfirmingWipe(false)}>Cancelar</button>
-                  <button className="modal-btn modal-btn--danger" onClick={wipeAllData}>Sí, borrar todo</button>
+                  <button className="modal-btn modal-btn--cancel" onClick={() => setConfirmingWipe(false)}>{tr("Cancelar")}</button>
+                  <button className="modal-btn modal-btn--danger" onClick={wipeAllData}>{tr("Sí, borrar todo")}</button>
                 </div>
               </>
             )}
@@ -6611,17 +6963,17 @@ export default function TaskApp() {
           <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
               <div className="modal-title">
-                {isArea ? `¿Eliminar el área "${area?.name}"?` : isTask ? `¿Eliminar "${task?.title}"?` : `¿Eliminar el proyecto "${project?.name}"?`}
+                {isArea ? tr("¿Eliminar el área \"{name}\"?", { name: area?.name }) : isTask ? tr("¿Eliminar \"{name}\"?", { name: task?.title }) : tr("¿Eliminar el proyecto \"{name}\"?", { name: project?.name })}
               </div>
               <div className="modal-text">
                 {isArea
-                  ? (count > 0 ? `Esto también va a borrar sus ${count} tarea${count === 1 ? "" : "s"}. Esta acción no se puede deshacer.` : "Esta acción no se puede deshacer.")
-                  : isTask ? "Esta acción no se puede deshacer."
-                  : (count > 0 ? `Las ${count} tarea${count === 1 ? "" : "s"} de este proyecto van a quedar sin proyecto asignado, dentro de "${area?.name}".` : "Esta acción no se puede deshacer.")}
+                  ? (count > 0 ? (count === 1 ? tr("Esto también va a borrar su tarea. Esta acción no se puede deshacer.") : tr("Esto también va a borrar sus {n} tareas. Esta acción no se puede deshacer.", { n: count })) : tr("Esta acción no se puede deshacer."))
+                  : isTask ? tr("Esta acción no se puede deshacer.")
+                  : (count > 0 ? tr(count === 1 ? "La tarea de este proyecto va a quedar sin proyecto asignado, dentro de \"{area}\"." : "Las {n} tareas de este proyecto van a quedar sin proyecto asignado, dentro de \"{area}\".", { n: count, area: area?.name }) : tr("Esta acción no se puede deshacer."))}
               </div>
               <div className="modal-actions">
-                <button className="modal-btn modal-btn--cancel" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-                <button className="modal-btn modal-btn--danger" onClick={confirmDelete}>{isArea ? "Eliminar área" : isTask ? "Eliminar" : "Eliminar proyecto"}</button>
+                <button className="modal-btn modal-btn--cancel" onClick={() => setDeleteTarget(null)}>{tr("Cancelar")}</button>
+                <button className="modal-btn modal-btn--danger" onClick={confirmDelete}>{isArea ? tr("Eliminar área") : isTask ? tr("Eliminar") : tr("Eliminar proyecto")}</button>
               </div>
             </div>
           </div>
