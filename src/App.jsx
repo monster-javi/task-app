@@ -67,6 +67,46 @@ async function decryptPayload(key, envelope) {
   return JSON.parse(new TextDecoder().decode(plainBuf));
 }
 
+// Small password prompt outside React (used when restoring an encrypted
+// backup). Resolves with the typed password, or null if cancelled.
+function askPassword(title, message, cancelLabel, okLabel) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px";
+    const form = document.createElement("form");
+    form.style.cssText = "background:#14171b;color:#e9ebee;border:1px solid #2a2f37;border-radius:14px;padding:20px;width:100%;max-width:380px;font:14px/1.45 Inter,system-ui,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.5)";
+    const h = document.createElement("div");
+    h.style.cssText = "font-weight:600;font-size:16px;margin-bottom:6px";
+    h.textContent = title;
+    const p = document.createElement("div");
+    p.style.cssText = "color:#8d94a0;margin-bottom:12px";
+    p.textContent = message;
+    const input = document.createElement("input");
+    input.type = "password";
+    input.autocomplete = "current-password";
+    input.style.cssText = "width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid #2a2f37;background:#191d22;color:#e9ebee;font:inherit";
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:8px;justify-content:flex-end;margin-top:14px";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = cancelLabel;
+    cancel.style.cssText = "padding:8px 14px;border-radius:9px;border:1px solid #2a2f37;background:transparent;color:#e9ebee;font:inherit;cursor:pointer";
+    const ok = document.createElement("button");
+    ok.type = "submit";
+    ok.textContent = okLabel;
+    ok.style.cssText = "padding:8px 14px;border-radius:9px;border:0;background:#4c8dff;color:#fff;font:inherit;font-weight:600;cursor:pointer";
+    row.append(cancel, ok);
+    form.append(h, p, input, row);
+    overlay.append(form);
+    const done = (v) => { overlay.remove(); resolve(v); };
+    cancel.onclick = () => done(null);
+    form.onsubmit = (e) => { e.preventDefault(); done(input.value); };
+    overlay.addEventListener("keydown", (e) => { if (e.key === "Escape") done(null); });
+    document.body.appendChild(overlay);
+    input.focus();
+  });
+}
+
 // ---------- constants ----------
 
 const PALETTE = ["#4C8DFF", "#34D399", "#A78BFA", "#FB923C", "#F0554B", "#2DD4BF", "#F5C451", "#F472B6", "#60A5FA", "#84CC16"];
@@ -112,6 +152,12 @@ const EN = {
   "No se pudo activar el cifrado: ": "Couldn't turn on encryption: ",
   "Ingresá tu contraseña de cifrado.": "Enter your encryption password.",
   "Contraseña incorrecta.": "Wrong password.",
+  "Desbloqueá tus datos para exportar.": "Unlock your data to export it.",
+  "Backup cifrado": "Encrypted backup",
+  "Ingresá la contraseña de cifrado con la que se hizo este backup.": "Enter the encryption password this backup was made with.",
+  "Cancelar": "Cancel",
+  "Abrir": "Open",
+  "Backup cifrado descargado": "Encrypted backup downloaded",
   "No se pudo desbloquear: ": "Couldn't unlock: ",
   "Ingresá tu contraseña de cifrado actual.": "Enter your current encryption password.",
   "Cifrado desactivado": "Encryption turned off",
@@ -2151,14 +2197,26 @@ export default function TaskApp() {
     setTimeout(() => setToast(""), 2600);
   }
 
-  function exportData() {
-    const blob = new Blob([JSON.stringify({ areas, tasks, events, notes }, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "taskapp_backup_" + new Date().toISOString().slice(0, 10) + ".json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-    showToast(tr("Backup descargado"));
+  // With encryption on, the whole backup is encrypted with the same key as the
+  // data in Supabase: the .json only holds { salt, iv, ciphertext }.
+  async function exportData() {
+    try {
+      const plain = { areas, tasks, events, notes };
+      let out = plain;
+      if (isEncrypted) {
+        if (!encryptionKeyRef.current || !encSaltRef.current) { showToast(tr("Desbloqueá tus datos para exportar.")); return; }
+        out = { taskBackup: 2, encrypted: true, salt: encSaltRef.current, ...(await encryptPayload(encryptionKeyRef.current, plain)) };
+      }
+      const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "taskapp_backup_" + new Date().toISOString().slice(0, 10) + ".json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast(tr(isEncrypted ? "Backup cifrado descargado" : "Backup descargado"));
+    } catch (err) {
+      showToast(String((err && err.message) || err));
+    }
   }
 
   function restoreData(evt) {
@@ -2166,9 +2224,20 @@ export default function TaskApp() {
     evt.target.value = "";
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       let data;
       try { data = JSON.parse(e.target.result); } catch (err) { showToast(tr("Archivo inválido")); return; }
+      if (data && data.encrypted && data.salt && data.iv && data.ciphertext) {
+        try {
+          let key = encryptionKeyRef.current && encSaltRef.current === data.salt ? encryptionKeyRef.current : null;
+          if (!key) {
+            const pass = await askPassword(tr("Backup cifrado"), tr("Ingresá la contraseña de cifrado con la que se hizo este backup."), tr("Cancelar"), tr("Abrir"));
+            if (pass == null) return;
+            key = await deriveKeyFromPassphrase(pass, data.salt);
+          }
+          data = await decryptPayload(key, data);
+        } catch (err) { showToast(tr("Contraseña incorrecta.")); return; }
+      }
       if (!Array.isArray(data.areas) || !Array.isArray(data.tasks)) { showToast(tr("El archivo no tiene el formato esperado")); return; }
       setAreas(data.areas);
       setTasks(data.tasks);
