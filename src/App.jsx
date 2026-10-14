@@ -144,7 +144,7 @@ const EN = {
   "Agregar tarea": "Add task",
   "Nueva tarea general": "New general task",
   "Nueva tarea": "New task",
-  "No se pudo conectar con Supabase": "Couldn't connect to Supabase",
+  "No se pudo conectar con el servidor": "Couldn't connect to the server",
   "Usá al menos 8 caracteres.": "Use at least 8 characters.",
   "Las contraseñas no coinciden.": "Passwords don't match.",
   "El cifrado necesita HTTPS (o localhost). Esta página no cumple ese requisito.": "Encryption requires HTTPS (or localhost). This page doesn't meet that requirement.",
@@ -374,7 +374,7 @@ const EN = {
   "Datos sin cifrar — ver cifrado": "Data not encrypted — view encryption",
   "Guardando...": "Saving...",
   "Sincronizado": "Synced",
-  "Conectado a Supabase": "Connected to Supabase",
+  "Conectado": "Connected",
   "Idioma": "Language",
   "Idioma de la app.": "App language.",
   "Ver cifrado": "View encryption",
@@ -394,12 +394,12 @@ const EN = {
   "Eliminar proyecto": "Delete project",
   "Nombre del nuevo proyecto...": "New project name...",
   "Cifrado de extremo a extremo": "End-to-end encryption",
-  "Tus datos están cifrados en tu navegador antes de llegar a Supabase (AES-256-GCM). Ni Supabase ni nadie con acceso a la base puede leerlos.": "Your data is encrypted in your browser before it reaches Supabase (AES-256-GCM). Neither Supabase nor anyone with database access can read it.",
-  "Tus datos se guardan en Supabase sin cifrar. Podés activar el cifrado de extremo a extremo cuando quieras.": "Your data is stored in Supabase unencrypted. You can turn on end-to-end encryption whenever you want.",
+  "Tus datos se cifran en tu navegador antes de guardarse (AES-256-GCM). Nadie con acceso a la base de datos puede leerlos.": "Your data is encrypted in your browser before it's saved (AES-256-GCM). No one with access to the database can read it.",
+  "Tus datos se guardan sin cifrar. Podés activar el cifrado de extremo a extremo cuando quieras.": "Your data is stored unencrypted. You can turn on end-to-end encryption whenever you want.",
   "Cerrar": "Close",
   "Desactivar cifrado": "Turn off encryption",
   "Activar cifrado": "Turn on encryption",
-  "Ingresá tu contraseña de cifrado actual para confirmar que querés desactivarlo. Una vez desactivado, tus datos quedan en texto plano en Supabase.": "Enter your current encryption password to confirm you want to turn it off. Once it's off, your data is stored as plain text in Supabase.",
+  "Ingresá tu contraseña de cifrado actual para confirmar que querés desactivarlo. Una vez desactivado, tus datos quedan sin cifrar en la base de datos.": "Enter your current encryption password to confirm you want to turn it off. Once it's off, your data is stored unencrypted in the database.",
   "Contraseña de cifrado actual": "Current encryption password",
   "Creá una contraseña de cifrado. Es distinta de tu contraseña de acceso y nunca sale de este navegador. Si la olvidás, no hay forma de recuperar los datos.": "Create an encryption password. It's different from your sign-in password and never leaves this browser. If you forget it, there's no way to recover your data.",
   "Repetí la contraseña": "Repeat the password",
@@ -1391,7 +1391,7 @@ export default function TaskApp() {
       if (cancelled) return;
       if (error) {
         console.error(error);
-        showToast(tr("No se pudo conectar con Supabase"));
+        showToast(tr("No se pudo conectar con el servidor"));
         return;
       }
 
@@ -6560,7 +6560,7 @@ export default function TaskApp() {
             className={`iconbtn icon-only sync-indicator ${syncError ? "sync-indicator--error" : ""}`}
             onClick={() => { if (syncError) saveDiff(); }}
             style={syncError ? { cursor: "pointer" } : undefined}
-            title={syncError ? tr("No se pudo guardar — tocá para reintentar") : saving ? tr("Guardando...") : lastSyncAt ? `${tr("Sincronizado")} — ${new Date(lastSyncAt).toLocaleTimeString(appLang === "en" ? "en-US" : "es-AR")}` : tr("Conectado a Supabase")}
+            title={syncError ? tr("No se pudo guardar — tocá para reintentar") : saving ? tr("Guardando...") : lastSyncAt ? `${tr("Sincronizado")} — ${new Date(lastSyncAt).toLocaleTimeString(appLang === "en" ? "en-US" : "es-AR")}` : tr("Conectado")}
           >
             {syncError ? <CloudOff size={14} /> : saving ? <RefreshCw size={14} className="spin" /> : <Cloud size={14} />}
           </span>
@@ -6841,8 +6841,8 @@ export default function TaskApp() {
               <>
                 <div className="modal-text">
                   {isEncrypted
-                    ? tr("Tus datos están cifrados en tu navegador antes de llegar a Supabase (AES-256-GCM). Ni Supabase ni nadie con acceso a la base puede leerlos.")
-                    : tr("Tus datos se guardan en Supabase sin cifrar. Podés activar el cifrado de extremo a extremo cuando quieras.")}
+                    ? tr("Tus datos se cifran en tu navegador antes de guardarse (AES-256-GCM). Nadie con acceso a la base de datos puede leerlos.")
+                    : tr("Tus datos se guardan sin cifrar. Podés activar el cifrado de extremo a extremo cuando quieras.")}
                 </div>
                 <div className="modal-actions">
                   <button className="modal-btn modal-btn--cancel" onClick={closeEncSettings}>{tr("Cerrar")}</button>
@@ -6862,7 +6862,7 @@ export default function TaskApp() {
             {encSettingsView === "disable-confirm" && (
               <>
                 <div className="modal-text">
-                  {tr("Ingresá tu contraseña de cifrado actual para confirmar que querés desactivarlo. Una vez desactivado, tus datos quedan en texto plano en Supabase.")}
+                  {tr("Ingresá tu contraseña de cifrado actual para confirmar que querés desactivarlo. Una vez desactivado, tus datos quedan sin cifrar en la base de datos.")}
                 </div>
                 <input
                   type="password"
