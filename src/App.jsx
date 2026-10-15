@@ -257,6 +257,11 @@ const EN = {
   "ayer": "yesterday",
   "hace {n} días": "{n} days ago",
   "Guardada en Notas": "Saved to Notes",
+  "Igualar tamaños": "Same size",
+  "Notas con el mismo tamaño": "Notes back to the same size",
+  "Volver todas las notas al mismo ancho y alto": "Give every note the same width and height again",
+  "Arrastrar para reordenar": "Drag to reorder",
+  "Estirar (ancho y alto)": "Stretch (width and height)",
   "Ahora es una tarea en {dest}": "It's now a task in {dest}",
   "Nota eliminada": "Note deleted",
   "Convertir en tarea en…": "Turn into a task in…",
@@ -1035,6 +1040,28 @@ function QuickAddRow({ placeholder, onAdd, indent, general }) {
 }
 
 // ---------- main component ----------
+
+// ---------- Notas: orden manual y grilla tipo mosaico ----------
+// Orden: "order" explícito; las notas viejas (sin order) quedan como estaban, de la más nueva a la más vieja.
+const noteSortKey = (n) => (typeof n.order === "number" ? n.order : -(n.createdAt || 0));
+const nextNoteOrder = (list) => (list.length ? Math.max(...list.map(noteSortKey)) + 1 : 0);
+const NOTE_GAP = 10;
+
+// Cada celda ocupa tantas filas de 1px como mide su tarjeta: así las notas de distinto alto se acomodan sin huecos.
+function NoteCell({ span, children, ...rest }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const cell = ref.current;
+    const card = cell && cell.firstElementChild;
+    if (!card) return;
+    const fit = () => { cell.style.gridRowEnd = `span ${Math.max(1, Math.ceil(card.offsetHeight + NOTE_GAP))}`; };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(card);
+    return () => ro.disconnect();
+  }, []);
+  return <div ref={ref} className="note-cell" style={{ gridColumn: `span ${span}` }} {...rest}>{children}</div>;
+}
 
 export default function TaskApp() {
   const [areas, setAreas] = useState(seedAreas);
@@ -3966,7 +3993,7 @@ export default function TaskApp() {
       id: uid(), title: t.title, body: t.note || "", areaId: t.areaId || null, projectId: t.projectId || null,
       fromTask: { status: t.status, priority: t.priority, date: t.date || null }, createdAt: Date.now(),
     };
-    setNotes((prev) => [note, ...prev]);
+    setNotes((prev) => [...prev, { ...note, order: nextNoteOrder(prev) }]);
     setTasks((prev) => prev.filter((x) => x.id !== taskId));
     setDraggedTaskId(null); setDragOverKey(null); setCalDragTaskId(null); setCalDropTarget(null);
     setCalPopover(null);
@@ -4006,7 +4033,7 @@ export default function TaskApp() {
 
   function createNote({ title = "", body = "" } = {}) {
     const note = { id: uid(), title, body, createdAt: Date.now() };
-    setNotes((prev) => [note, ...prev]);
+    setNotes((prev) => [...prev, { ...note, order: nextNoteOrder(prev) }]);
     return note;
   }
 
@@ -4024,8 +4051,115 @@ export default function TaskApp() {
     const q = search.trim().toLowerCase();
     return notes
       .filter((n) => !q || (n.title || "").toLowerCase().includes(q) || (n.body || "").toLowerCase().includes(q))
-      .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+      .sort((a, b) => noteSortKey(a) - noteSortKey(b));
   }, [notes, search]);
+
+  // Cambios de forma/orden de las notas: no cuentan como "editada" (no tocan updatedAt).
+  function patchNotesLayout(fn) {
+    setNotes((prev) => fn(prev));
+  }
+
+  function resetNoteSizes() {
+    patchNotesLayout((prev) => prev.map((n) => {
+      if (n.w == null && n.h == null) return n;
+      const { w, h, ...rest } = n;
+      return rest;
+    }));
+    showToast(tr("Notas con el mismo tamaño"));
+  }
+
+  function notesGridGeometry(grid) {
+    const cs = getComputedStyle(grid);
+    const cols = Math.max(1, cs.gridTemplateColumns.split(" ").filter(Boolean).length);
+    const gap = parseFloat(cs.columnGap) || NOTE_GAP;
+    return { cols, gap, colW: (grid.clientWidth - gap * (cols - 1)) / cols };
+  }
+
+  // Estirar una nota desde la esquina: el ancho salta de a columnas (nunca más que la grilla), el alto es libre.
+  function startNoteResize(e, n) {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const cell = e.currentTarget.closest(".note-cell");
+    const card = cell.firstElementChild;
+    const { cols, gap, colW } = notesGridGeometry(cell.parentElement);
+    const x0 = e.clientX, y0 = e.clientY, w0 = card.offsetWidth, h0 = card.offsetHeight;
+    let span = Math.min(cols, n.w || 1), h = n.h || null;
+    document.body.classList.add("note-resizing");
+    const move = (ev) => {
+      span = Math.min(cols, Math.max(1, Math.round((w0 + ev.clientX - x0 + gap) / (colW + gap))));
+      cell.style.gridColumn = `span ${span}`;
+      if (Math.abs(ev.clientY - y0) > 3 || h) {
+        h = Math.max(90, Math.round(h0 + ev.clientY - y0));
+        card.style.height = h + "px";
+        card.classList.add("note-card--sized");
+      }
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.classList.remove("note-resizing");
+      patchNotesLayout((prev) => prev.map((x) => {
+        if (x.id !== n.id) return x;
+        const out = { ...x };
+        if (span > 1) out.w = span; else delete out.w;
+        if (h) out.h = h; else delete out.h;
+        return out;
+      }));
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
+
+  // Reordenar arrastrando desde el asa: se suelta antes o después de la nota que queda bajo el puntero.
+  const [noteDrag, setNoteDrag] = useState(null); // { id, overId, after }
+  const [notesCols, setNotesCols] = useState(4);
+  const notesGridRO = useRef(null);
+  const notesGridRef = useCallback((el) => {
+    if (notesGridRO.current) { notesGridRO.current.disconnect(); notesGridRO.current = null; }
+    if (!el) return;
+    const measure = () => setNotesCols(notesGridGeometry(el).cols);
+    measure();
+    notesGridRO.current = new ResizeObserver(measure);
+    notesGridRO.current.observe(el);
+  }, []);
+  function startNoteDrag(e, n) {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    let state = { id: n.id, overId: null, after: false };
+    setNoteDrag(state);
+    document.body.classList.add("note-dragging");
+    const move = (ev) => {
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const cell = el && el.closest(".note-cell[data-note-id]");
+      let next = { id: n.id, overId: null, after: false };
+      if (cell && cell.dataset.noteId !== n.id) {
+        const r = cell.getBoundingClientRect();
+        next = { id: n.id, overId: cell.dataset.noteId, after: ev.clientX > r.left + r.width / 2 };
+      }
+      if (next.overId !== state.overId || next.after !== state.after) { state = next; setNoteDrag(next); }
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.classList.remove("note-dragging");
+      setNoteDrag(null);
+      if (!state.overId) return;
+      patchNotesLayout((prev) => {
+        const sorted = [...prev].sort((a, b) => noteSortKey(a) - noteSortKey(b));
+        const moving = sorted.find((x) => x.id === state.id);
+        if (!moving) return prev;
+        const rest = sorted.filter((x) => x.id !== state.id);
+        let i = rest.findIndex((x) => x.id === state.overId);
+        if (i < 0) return prev;
+        if (state.after) i += 1;
+        rest.splice(i, 0, moving);
+        const pos = new Map(rest.map((x, k) => [x.id, k]));
+        return prev.map((x) => (x.order === pos.get(x.id) ? x : { ...x, order: pos.get(x.id) }));
+      });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
 
   const taskDragActive = !!(draggedTaskId || calDragTaskId);
   function notesDropProps() {
@@ -4106,17 +4240,25 @@ export default function TaskApp() {
             }}
           />
           <span className="notes-new-hint">{tr("Enter para crear · arrastrá una tarea a Notas para guardarla acá")}</span>
+          {notes.some((n) => n.w != null || n.h != null) && (
+            <button className="notes-reset-btn" onClick={resetNoteSizes} title={tr("Volver todas las notas al mismo ancho y alto")}>{tr("Igualar tamaños")}</button>
+          )}
         </div>
         {visibleNotes.length === 0 ? (
           <div className="notes-empty">
             {search.trim() ? tr("Ninguna nota coincide con \"{q}\".", { q: search.trim() }) : tr("Todavía no hay notas.")}
           </div>
         ) : (
-          <div className="notes-grid">
+          <div ref={notesGridRef} className={`notes-grid ${noteDrag ? "notes-grid--dragging" : ""}`}>
             {visibleNotes.map((n) => {
               const origin = noteOrigin(n);
+              const dropCls = noteDrag && noteDrag.overId === n.id ? (noteDrag.after ? " note-cell--drop-after" : " note-cell--drop-before") : "";
               return (
-                <div key={n.id} className="note-card">
+                <NoteCell key={n.id} span={Math.min(n.w || 1, notesCols)} data-note-id={n.id}>
+                <div className={`note-card${n.h ? " note-card--sized" : ""}${noteDrag && noteDrag.id === n.id ? " note-card--moving" : ""}${dropCls}`} style={n.h ? { height: n.h } : undefined}>
+                  {!search.trim() && (
+                    <button type="button" className="note-grip" onPointerDown={(e) => startNoteDrag(e, n)} title={tr("Arrastrar para reordenar")} tabIndex={-1}><GripVertical size={13} /></button>
+                  )}
                   <input
                     className="note-title"
                     defaultValue={n.title}
@@ -4149,7 +4291,9 @@ export default function TaskApp() {
                       <button className="note-act note-act--danger" onClick={() => deleteNote(n.id)} title={tr("Eliminar nota")}><Trash2 size={13} /></button>
                     </span>
                   </div>
+                  <span className="note-resize" onPointerDown={(e) => startNoteResize(e, n)} title={tr("Estirar (ancho y alto)")} />
                 </div>
+                </NoteCell>
               );
             })}
           </div>
@@ -4232,7 +4376,7 @@ export default function TaskApp() {
     const q = mobileSearch.trim().toLowerCase();
     const list = [...notes]
       .filter((n) => !q || (n.title || "").toLowerCase().includes(q) || (n.body || "").toLowerCase().includes(q))
-      .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+      .sort((a, b) => noteSortKey(a) - noteSortKey(b));
     return (
       <div className="m-screen" style={{ "--chip": "#F2AB43" }} {...mobileSwipeHandlers(true)}>
         {renderMobileBrandBar()}
@@ -4332,7 +4476,7 @@ export default function TaskApp() {
     const body = ed.body || "";
     if (!title && !body.trim()) { setMobileNoteEdit(null); return; }
     if (ed.id) updateNote(ed.id, { title, body });
-    else setNotes((prev) => [{ id: uid(), title, body, areaId: null, projectId: null, createdAt: Date.now() }, ...prev]);
+    else setNotes((prev) => [...prev, { id: uid(), title, body, areaId: null, projectId: null, createdAt: Date.now(), order: nextNoteOrder(prev) }]);
     setMobileNoteEdit(null);
     showToast(ed.id ? tr("Nota guardada") : tr("Nota creada"));
   }
@@ -5958,13 +6102,36 @@ export default function TaskApp() {
         .notes-new input::placeholder { color: var(--text-faint); }
         .notes-new-hint { font-size: 12px; color: var(--text-faint); white-space: nowrap; }
         .notes-empty { padding: 50px 20px; text-align: center; color: var(--text-faint); font-size: 14px; }
-        .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; align-items: start; }
+        .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); column-gap: 10px; row-gap: 0; grid-auto-rows: 1px; align-items: start; }
+        .note-cell { min-width: 0; position: relative; }
         .note-card {
-          display: flex; flex-direction: column; gap: 2px; min-width: 0;
+          display: flex; flex-direction: column; gap: 2px; min-width: 0; position: relative; box-sizing: border-box;
           background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px 6px;
           transition: border-color .12s;
         }
         .note-card:hover, .note-card:focus-within { border-color: var(--border-strong); }
+        .note-card--sized { overflow: hidden; }
+        .note-card--sized .note-body { height: auto !important; flex: 1 1 0; min-height: 0; max-height: none; overflow-y: auto; }
+        .note-card--moving { opacity: .45; }
+        .note-cell--drop-before { box-shadow: -6px 0 0 -3px var(--amber); }
+        .note-cell--drop-after { box-shadow: 6px 0 0 -3px var(--amber); }
+        .note-grip {
+          position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+          border: none; background: none; color: var(--text-faint); border-radius: 5px; cursor: grab; opacity: 0; transition: opacity .12s; touch-action: none; padding: 0;
+        }
+        .note-card:hover .note-grip { opacity: 1; }
+        .note-grip:hover { background: var(--surface-2); color: var(--text); }
+        .note-title { padding-right: 22px !important; }
+        .note-resize {
+          position: absolute; right: 1px; bottom: 1px; width: 14px; height: 14px; cursor: nwse-resize; opacity: 0; transition: opacity .12s; touch-action: none;
+          background: linear-gradient(135deg, transparent 0 55%, var(--text-faint) 55% 62%, transparent 62% 72%, var(--text-faint) 72% 79%, transparent 79%);
+          border-radius: 0 0 9px 0;
+        }
+        .note-card:hover .note-resize { opacity: .8; }
+        body.note-resizing, body.note-resizing * { cursor: nwse-resize !important; user-select: none !important; }
+        body.note-dragging, body.note-dragging * { cursor: grabbing !important; user-select: none !important; }
+        .notes-reset-btn { flex-shrink: 0; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 7px; cursor: pointer; }
+        .notes-reset-btn:hover { color: var(--text); border-color: var(--border-strong); }
         .note-title { background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 14px; font-weight: 600; padding: 0; width: 100%; }
         .note-title::placeholder { color: var(--text-faint); }
         .note-body {
