@@ -74,23 +74,23 @@ function askPassword(title, message, cancelLabel, okLabel) {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px";
     const form = document.createElement("form");
-    form.style.cssText = "background:#14171b;color:#e9ebee;border:1px solid #2a2f37;border-radius:14px;padding:20px;width:100%;max-width:380px;font:14px/1.45 Inter,system-ui,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.5)";
+    form.style.cssText = "background:var(--surface,#14171b);color:var(--text,#e9ebee);border:1px solid var(--border,#2a2f37);border-radius:14px;padding:20px;width:100%;max-width:380px;font:14px/1.45 Inter,system-ui,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.5)";
     const h = document.createElement("div");
     h.style.cssText = "font-weight:600;font-size:16px;margin-bottom:6px";
     h.textContent = title;
     const p = document.createElement("div");
-    p.style.cssText = "color:#8d94a0;margin-bottom:12px";
+    p.style.cssText = "color:var(--text-dim,#8d94a0);margin-bottom:12px";
     p.textContent = message;
     const input = document.createElement("input");
     input.type = "password";
     input.autocomplete = "current-password";
-    input.style.cssText = "width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid #2a2f37;background:#191d22;color:#e9ebee;font:inherit";
+    input.style.cssText = "width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--border,#2a2f37);background:var(--surface-2,#191d22);color:var(--text,#e9ebee);font:inherit";
     const row = document.createElement("div");
     row.style.cssText = "display:flex;gap:8px;justify-content:flex-end;margin-top:14px";
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.textContent = cancelLabel;
-    cancel.style.cssText = "padding:8px 14px;border-radius:9px;border:1px solid #2a2f37;background:transparent;color:#e9ebee;font:inherit;cursor:pointer";
+    cancel.style.cssText = "padding:8px 14px;border-radius:9px;border:1px solid var(--border,#2a2f37);background:transparent;color:var(--text,#e9ebee);font:inherit;cursor:pointer";
     const ok = document.createElement("button");
     ok.type = "submit";
     ok.textContent = okLabel;
@@ -377,6 +377,10 @@ const EN = {
   "Conectado": "Connected",
   "Idioma": "Language",
   "Idioma de la app.": "App language.",
+  "Tema": "Theme",
+  "Modo oscuro o claro.": "Dark or light mode.",
+  "Oscuro": "Dark",
+  "Claro": "Light",
   "Ver cifrado": "View encryption",
   "Favoritos": "Favorites",
   "Texto libre": "Free text",
@@ -827,6 +831,12 @@ const BOOT_STYLES = `
     display: flex; align-items: center; justify-content: center;
     height: 100vh; height: 100dvh; min-height: 480px; color: var(--text);
   }
+  html.theme-light .boot-screen {
+    --bg: #f3f4f7; --surface: #ffffff; --surface-2: #f1f3f6; --border: rgba(15,17,22,0.09);
+    --text: #14161c; --text-dim: #545b68; --text-faint: #959cab; --amber: #d48a17; --alta: #d9443a; --blue: #2f6fe0; --good: #1e9e50;
+    background: radial-gradient(1200px 600px at 50% -10%, rgba(212,138,23,0.08), transparent 60%), var(--bg);
+  }
+  html.theme-light .auth-card { box-shadow: 0 30px 80px -24px rgba(15,17,22,0.28); }
   .mono { font-variant-numeric: tabular-nums; }
   .boot-msg { color: var(--text-faint); font-size: 14px; }
 
@@ -1121,6 +1131,12 @@ export default function TaskApp() {
     });
   }
   const [appLang, setAppLang] = useState(() => loadLocalPrefs().appLang || "es");
+  const [appTheme, setAppTheme] = useState(() => { try { return localStorage.getItem("tt_theme") === "light" ? "light" : "dark"; } catch (e) { return "dark"; } });
+  useEffect(() => {
+    document.documentElement.classList.toggle("theme-light", appTheme === "light");
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", appTheme === "light" ? "#f3f4f7" : "#0f1116");
+    try { localStorage.setItem("tt_theme", appTheme); } catch (e) {}
+  }, [appTheme]);
   CUR_LANG = appLang === "en" ? "en" : "es";
   useEffect(() => { document.documentElement.lang = appLang === "en" ? "en" : "es"; }, [appLang]);
   const [weekStartsSunday, setWeekStartsSunday] = useState(() => !!loadLocalPrefs().weekStartsSunday);
@@ -5158,6 +5174,36 @@ export default function TaskApp() {
           --shadow-pop: 0 20px 50px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07);
           --font: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
+        /* modo claro (mismos tonos que Arbolito App) */
+        html.theme-light, html.theme-light .tt-root, html.theme-light .boot-screen {
+          --bg: #f3f4f7;
+          --side: #fbfbfc;
+          --surface: #ffffff;
+          --surface-2: #f1f3f6;
+          --surface-3: #e6e9ef;
+          --weekend: rgba(15,17,22,0.035);
+          --border: rgba(15,17,22,0.09);
+          --border-strong: rgba(15,17,22,0.16);
+          --text: #14161c;
+          --text-dim: #545b68;
+          --text-faint: #959cab;
+          --amber: #d48a17;
+          --amber-soft: rgba(212,138,23,0.12);
+          --amber-line: rgba(212,138,23,0.45);
+          --blue: #2f6fe0;
+          --alta: #d9443a;
+          --media: #d48a17;
+          --baja: #959cab;
+          --good: #1e9e50;
+          --shadow-pop: 0 20px 50px -14px rgba(15,17,22,0.35), 0 0 0 1px rgba(15,17,22,0.08);
+        }
+        html.theme-light .modal-overlay { background: rgba(15,17,22,0.28); }
+        html.theme-light .side-item:hover, html.theme-light .cal-pop-title:hover { background: rgba(15,17,22,0.045); }
+        html.theme-light .group-head:hover { background-color: rgba(15,17,22,0.025); }
+        html.theme-light thead th { background: rgba(15,17,22,0.02); }
+        html.theme-light tbody tr:hover { background: rgba(15,17,22,0.03); }
+        html.theme-light .color-swatch { border-color: rgba(15,17,22,0.18); }
+        html.theme-light .m-task-row--dragging { box-shadow: 0 10px 28px rgba(15,17,22,0.22); }
         .tt-root {
           position: relative;
           font-family: var(--font);
@@ -6938,6 +6984,16 @@ export default function TaskApp() {
                   <select className="settings-select" value={appLang} onChange={(e) => setAppLang(e.target.value)}>
                     <option value="es">ESP</option>
                     <option value="en">ENG</option>
+                  </select>
+                </div>
+                <div className="settings-row">
+                  <div>
+                    <div className="settings-row-title">{tr("Tema")}</div>
+                    <div className="settings-row-desc">{tr("Modo oscuro o claro.")}</div>
+                  </div>
+                  <select className="settings-select" value={appTheme} onChange={(e) => setAppTheme(e.target.value)}>
+                    <option value="dark">{tr("Oscuro")}</option>
+                    <option value="light">{tr("Claro")}</option>
                   </select>
                 </div>
 

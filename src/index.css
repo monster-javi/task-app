@@ -1,6 +1,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #root { height: 100%; overflow: hidden; overscroll-behavior: none; }
 body { background: #0f1116; position: fixed; inset: 0; width: 100%; }
+html.theme-light body { background: #f3f4f7; }
+html.theme-light {
+  --bg: #f3f4f7; --surface: #ffffff; --surface-2: #f1f3f6; --border: rgba(15,17,22,0.09);
+  --text: #14161c; --text-dim: #545b68; --text-faint: #959cab; --amber: #d48a17; --blue: #2f6fe0; --alta: #d9443a; --media: #d48a17; --baja: #959cab;
+}
 
 :root {
   --bg: #0f1116;
