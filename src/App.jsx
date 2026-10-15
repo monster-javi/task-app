@@ -4700,6 +4700,24 @@ export default function TaskApp() {
         : (CUR_LANG === "en" ? `${MA()[a[1] - 1]} ${a[2]} – ${MA()[b[1] - 1]} ${b[2]}, ${b[0]}` : `${a[2]} ${MA()[a[1] - 1].toLowerCase()} – ${b[2]} ${MA()[b[1] - 1].toLowerCase()} ${b[0]}`);
     } else title = longDateLabel(selectedDay);
 
+    // Títulos posibles del período para reservar el ancho del más largo: así las flechas y "Hoy" no se mueven al navegar.
+    const titleSizers = (() => {
+      const pad = (n) => String(n).padStart(2, "0");
+      if (calView === "mes") return ML().map((m) => `${m} ${calCursor.year}`);
+      if (calView === "dia") {
+        const y = Number(selectedDay.slice(0, 4)), out = [];
+        for (let m = 1; m <= 12; m++) for (let d = 20; d <= 26; d++) out.push(longDateLabel(`${y}-${pad(m)}-${pad(d)}`));
+        return out;
+      }
+      const out = [], y = calCursor.year;
+      for (let m = 0; m < 12; m++) {
+        const A = MA()[m], L = ML()[m], B = MA()[(m + 1) % 12];
+        out.push(CUR_LANG === "en" ? `${L} 20 – 26, ${y}` : `20 – 26 de ${L.toLowerCase()} ${y}`);
+        out.push(CUR_LANG === "en" ? `${A} 28 – ${B} 30, ${y}` : `28 ${A.toLowerCase()} – 30 ${B.toLowerCase()} ${y}`);
+      }
+      return out;
+    })();
+
     const dayCellHandlers = (iso) => ({
       "data-cal-iso": iso,
       onClick: () => { focusDay(iso); setCalPopover(null); },
@@ -4720,8 +4738,10 @@ export default function TaskApp() {
                 onClick={() => (showMonthPicker ? setShowMonthPicker(false) : openMonthPicker())}
                 title={tr("Elegir mes")}
               >
-                {title}
-                <ChevronDown size={16} className="cal-title-chev" />
+                <span className="cal-title-text">
+                  <span className="cal-title-cur"><span className="cal-title-txt">{title}</span><ChevronDown size={16} className="cal-title-chev" /></span>
+                  {titleSizers.map((t, i) => <span key={i} className="cal-title-txt cal-title-sizer" aria-hidden="true">{t}</span>)}
+                </span>
               </button>
               {showMonthPicker && (
                 <div className="month-picker-pop">
@@ -5601,6 +5621,12 @@ export default function TaskApp() {
           border-radius: 9px; cursor: pointer;
         }
         .cal-title::first-letter { text-transform: uppercase; }
+        .cal-title-text { display: grid; text-align: left; font-variant-numeric: tabular-nums; }
+        .cal-title-cur { grid-area: 1 / 1; display: flex; align-items: center; gap: 6px; }
+        .cal-title-txt { grid-area: 1 / 1; display: block; white-space: nowrap; }
+        .cal-title-sizer { padding-right: 22px; }
+        .cal-title-txt::first-letter { text-transform: uppercase; }
+        .cal-title-sizer { visibility: hidden; pointer-events: none; }
         .cal-title:hover { background: var(--surface); }
         .cal-title-chev { color: var(--text-faint); margin-top: 2px; }
         .cal-nav { display: flex; align-items: center; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 2px; }
