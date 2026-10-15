@@ -279,6 +279,8 @@ const EN = {
   "En curso": "Ongoing",
   "Próximos": "Upcoming",
   "Pasados": "Past",
+  "Mostrar": "Show",
+  "Ocultar": "Hide",
   "NOTAS": "NOTES",
   "Buscar en notas": "Search notes",
   "Todavía no hay notas. Tocá + para crear una, o deslizá una tarea hacia la izquierda y tocá Notas.": "No notes yet. Tap + to create one, or swipe a task left and tap Notes.",
@@ -4184,10 +4186,12 @@ export default function TaskApp() {
 
   function renderEventsView() {
     const g = eventGroups();
-    const section = (label, list, cls) => list.length > 0 && (
-      <div className="events-section">
-        <div className="events-section-title">{label} <span>{list.length}</span></div>
-        {list.map((ev) => (
+    const section = (key, label, list, cls) => list.length > 0 && (
+      <div className={`events-section ${collapsed["ev:" + key] ? "events-section--collapsed" : ""}`}>
+        <button type="button" className="events-section-title" onClick={() => setCollapsed((prev) => ({ ...prev, ["ev:" + key]: !prev["ev:" + key] }))} title={collapsed["ev:" + key] ? tr("Mostrar") : tr("Ocultar")}>
+          <ChevronDown size={14} className="events-section-chev" />{label} <span>{list.length}</span>
+        </button>
+        {!collapsed["ev:" + key] && list.map((ev) => (
           <div key={ev.id} className={`event-card ${cls || ""}`} style={{ "--ev": ev.color || EVENT_COLORS[0] }}>
             <button
               className="event-card-main"
@@ -4215,9 +4219,9 @@ export default function TaskApp() {
           ><Plus size={14} />{" "}{tr("Nuevo evento")}</button>
         </div>
         {events.length === 0 && <div className="notes-empty">{tr("Todavía no hay eventos.")}</div>}
-        {section(tr("En curso"), g.now)}
-        {section(tr("Próximos"), g.next)}
-        {section(tr("Pasados"), g.past.slice(0, 20), "event-card--past")}
+        {section("now", tr("En curso"), g.now)}
+        {section("next", tr("Próximos"), g.next)}
+        {section("past", tr("Pasados"), g.past.slice(0, 20), "event-card--past")}
         {renderEventEditor()}
       </div>
     );
@@ -4271,10 +4275,12 @@ export default function TaskApp() {
 
   function renderMobileEventsScreen() {
     const g = eventGroups();
-    const section = (label, list) => list.length > 0 && (
-      <div className="m-card" style={{ "--chip": "#A78BFA" }}>
-        <div className="m-card-title">{label} <span>{list.length}</span></div>
-        {list.map((ev) => (
+    const section = (key, label, list) => list.length > 0 && (
+      <div className={`m-card ${collapsed["ev:" + key] ? "m-card--evcollapsed" : ""}`} style={{ "--chip": "#A78BFA" }}>
+        <div className="m-card-title m-ev-toggle" onClick={() => setCollapsed((prev) => ({ ...prev, ["ev:" + key]: !prev["ev:" + key] }))}>
+          <ChevronDown size={14} className="events-section-chev" />{label} <span>{list.length}</span>
+        </div>
+        {!collapsed["ev:" + key] && list.map((ev) => (
           <button key={ev.id} className="m-event-row" style={{ "--ev": ev.color || EVENT_COLORS[0] }} onClick={() => setMobileEventEdit({ ...ev, end: ev.end || ev.start })}>
             <span className="m-event-bar" />
             <span className="m-event-text">
@@ -4298,9 +4304,9 @@ export default function TaskApp() {
         </div>
         <div className="m-list">
           {events.length === 0 && <div className="m-empty-hint">{tr("Todavía no hay eventos. Tocá + para crear uno (vacaciones, un viaje, lo que dure uno o varios días).")}</div>}
-          {section(tr("En curso"), g.now)}
-          {section(tr("Próximos"), g.next)}
-          {section(tr("Pasados"), g.past.slice(0, 20))}
+          {section("now", tr("En curso"), g.now)}
+          {section("next", tr("Próximos"), g.next)}
+          {section("past", tr("Pasados"), g.past.slice(0, 20))}
         </div>
         {renderMobileUrgentBar()}
       </div>
@@ -5994,7 +6000,11 @@ export default function TaskApp() {
         .events-head { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
         .events-head-text { flex: 1; font-size: 13px; color: var(--text-faint); }
         .events-section { margin-bottom: 22px; }
-        .events-section-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; color: var(--text-dim); margin: 0 4px 8px; }
+        .events-section-title { display: flex; align-items: center; gap: 8px; font: inherit; font-size: 13px; font-weight: 650; color: var(--text-dim); margin: 0 4px 8px; padding: 2px 6px 2px 2px; background: none; border: none; border-radius: 7px; cursor: pointer; }
+        .events-section-title:hover { color: var(--text); }
+        .events-section-chev { color: var(--text-faint); transition: transform .15s; flex-shrink: 0; }
+        .events-section--collapsed .events-section-chev, .m-card--evcollapsed .events-section-chev { transform: rotate(-90deg); }
+        .m-ev-toggle { cursor: pointer !important; display: flex; align-items: center; gap: 6px; }
         .events-section-title span { font-size: 11.5px; color: var(--text-faint); background: var(--surface-2); padding: 1px 8px; border-radius: 999px; }
         .event-card {
           display: flex; align-items: center; gap: 8px; padding-right: 10px; margin-bottom: 8px; overflow: hidden;
