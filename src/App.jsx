@@ -6110,8 +6110,9 @@ export default function TaskApp() {
           transition: border-color .12s;
         }
         .note-card:hover, .note-card:focus-within { border-color: var(--border-strong); }
-        .note-card--sized { overflow: hidden; }
-        .note-card--sized .note-body { height: auto !important; flex: 1 1 0; min-height: 0; max-height: none; overflow-y: auto; }
+        /* Todas las notas tienen el mismo alto salvo que se estiren a mano; el texto largo scrollea adentro. */
+        .notes-grid .note-card { height: 190px; overflow: hidden; }
+        .notes-grid .note-card .note-body { height: auto !important; flex: 1 1 0; min-height: 0; max-height: none; overflow-y: auto; }
         .note-card--moving { opacity: .45; }
         .note-cell--drop-before { box-shadow: -6px 0 0 -3px var(--amber); }
         .note-cell--drop-after { box-shadow: 6px 0 0 -3px var(--amber); }
