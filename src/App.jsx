@@ -336,6 +336,9 @@ const EN = {
   "Pasar todas a hoy": "Move all to today",
   "Arrastrá sobre varios días para crear un evento · doble clic para una tarea · arrastrá tareas y eventos para moverlos · T para hoy": "Drag across days to create an event · double-click for a task · drag tasks and events to move them · T for today",
   "Tarea": "Task",
+  "Ordenar por {col}": "Sort by {col}",
+  "Volver al orden manual": "Back to manual order",
+  "Movida a {area}": "Moved to {area}",
   "Detalle": "Details",
   "+ nota": "+ note",
   "Cargando...": "Loading...",
@@ -2046,6 +2049,57 @@ export default function TaskApp() {
       .filter((g) => !isSearching || g.allTasks.length > 0);
   }, [visibleTasks, orderedAreas, visibleOrderedAreas, selectedAreaId, search]);
 
+  // ---- orden por columna (clic en Tarea / Área / Estado / Prioridad / Fecha) ----
+  // Uno para la vista Lista y otro para Por prioridad. Clic: ascendente →
+  // descendente → orden manual (el de arrastrar). Se recuerda en el navegador.
+  const [listSort, setListSort] = useState(() => loadLocalPrefs().listSort || null);
+  const [prioSort, setPrioSort] = useState(() => loadLocalPrefs().prioSort || null);
+  useEffect(() => { saveLocalPrefs({ listSort, prioSort }); }, [listSort, prioSort]);
+  const activeSort = view === "prioridad" ? prioSort : listSort;
+  const setActiveSort = view === "prioridad" ? setPrioSort : setListSort;
+  function cycleSort(key) {
+    setActiveSort((cur) => (!cur || cur.key !== key ? { key, dir: 1 } : cur.dir === 1 ? { key, dir: -1 } : null));
+  }
+  function sortTaskList(list) {
+    const srt = activeSort;
+    if (!srt) return list;
+    const PRI = { Alta: 0, Media: 1, Baja: 2 };
+    const coll = (a, b) => String(a || "").localeCompare(String(b || ""), CUR_LANG === "en" ? "en" : "es", { sensitivity: "base", numeric: true });
+    const areaLabel = (t) => {
+      const a = areaMap[t.areaId];
+      const p = t.projectId ? a?.projects?.find((x) => x.id === t.projectId) : null;
+      return (a?.name || "") + " " + (p?.name || "");
+    };
+    const cmp = {
+      title: (a, b) => coll(a.title, b.title),
+      area: (a, b) => coll(areaLabel(a), areaLabel(b)),
+      status: (a, b) => STATUSES.indexOf(a.status) - STATUSES.indexOf(b.status),
+      priority: (a, b) => (PRI[a.priority] ?? 1) - (PRI[b.priority] ?? 1),
+      date: (a, b) => (a.date || "") === (b.date || "") ? 0 : !a.date ? 1 : !b.date ? -1 : a.date < b.date ? -1 : 1,
+    }[srt.key];
+    if (!cmp) return list;
+    return list
+      .map((t, i) => ({ t, i }))
+      .sort((x, y) => {
+        // Tasks without a date stay last in either direction.
+        if (srt.key === "date" && !x.t.date !== !y.t.date) return !x.t.date ? 1 : -1;
+        return cmp(x.t, y.t) * srt.dir || x.i - y.i;
+      })
+      .map((x) => x.t);
+  }
+  function sortTh(key, label, className = "") {
+    const on = activeSort && activeSort.key === key;
+    return (
+      <th
+        className={`${className} th-sort ${on ? "th-sort--on" : ""}`}
+        onClick={() => cycleSort(key)}
+        title={on && activeSort.dir === -1 ? tr("Volver al orden manual") : tr("Ordenar por {col}", { col: label.toLowerCase() })}
+      >
+        <span className="th-sort-label">{label}<span className="th-sort-arrow">{on ? (activeSort.dir === 1 ? "▲" : "▼") : "▲"}</span></span>
+      </th>
+    );
+  }
+
   const groupedByPriority = useMemo(() => {
     const buckets = { Alta: [], Media: [], Baja: [] };
     visibleTasks.forEach((t) => { (buckets[t.priority] || buckets.Media).push(t); });
@@ -2504,6 +2558,28 @@ export default function TaskApp() {
     forceImmediateSaveRef.current = true;
     setDraggedTaskId(null);
     setDragOverKey(null);
+  }
+
+  // Drop a task on an area in the left panel: it moves to that area (without
+  // project if it changes area; keeps its project if it was already there).
+  function moveTaskToArea(taskId, areaId) {
+    setDragOverKey(null);
+    setDraggedTaskId(null);
+    setCalDragTaskId(null);
+    setCalDropTarget(null);
+    const t = tasks.find((x) => x.id === taskId);
+    if (!t || !areaMap[areaId]) return;
+    if (t.areaId === areaId) return;
+    setTasks((prev) => {
+      const fromIdx = prev.findIndex((x) => x.id === taskId);
+      if (fromIdx === -1) return prev;
+      const list = [...prev];
+      const [moved] = list.splice(fromIdx, 1);
+      list.push({ ...moved, areaId, projectId: null });
+      return reassignGroupOrder(list, areaId, null);
+    });
+    forceImmediateSaveRef.current = true;
+    showToast(tr("Movida a {area}", { area: areaMap[areaId].name }));
   }
 
   function reorderTask(taskId, beforeTaskId) {
@@ -5120,19 +5196,21 @@ export default function TaskApp() {
     );
   }
 
-  function renderTaskTable(list, { showArea = false, showHeader = false, indent = false } = {}) {
+  function renderTaskTable(rawList, { showArea = false, showHeader = false, indent = false } = {}) {
+    const list = sortTaskList(rawList);
+    const sorted = !!activeSort;
     return (
       <table>
         {colGroupFor(showArea)}
         {showHeader && (
           <thead>
             <tr>
-              <th>{tr("Tarea")}</th>
-              {showArea && <th>{tr("Área")}</th>}
+              {sortTh("title", tr("Tarea"))}
+              {showArea && sortTh("area", tr("Área"))}
               <th className="col-center">{tr("Detalle")}</th>
-              <th className="col-center">{tr("Estado")}</th>
-              <th className="col-center">{tr("Prioridad")}</th>
-              <th className="col-center">{tr("Fecha")}</th>
+              {sortTh("status", tr("Estado"), "col-center")}
+              {view === "prioridad" ? <th className="col-center">{tr("Prioridad")}</th> : sortTh("priority", tr("Prioridad"), "col-center")}
+              {sortTh("date", tr("Fecha"), "col-center")}
               <th></th>
             </tr>
           </thead>
@@ -5149,7 +5227,13 @@ export default function TaskApp() {
                 onDragStart={(e) => { setDraggedTaskId(t.id); e.dataTransfer.setData("text/plain", t.id); e.dataTransfer.effectAllowed = "move"; }}
                 onDragEnd={() => { setDraggedTaskId(null); setDragOverKey(null); }}
                 onDragOver={(e) => { if (draggedTaskId && draggedTaskId !== t.id) { e.preventDefault(); e.stopPropagation(); setDragOverKey(`task:${t.id}`); } }}
-                onDrop={(e) => { e.preventDefault(); e.stopPropagation(); reorderTask(draggedTaskId, t.id); }}
+                onDrop={(e) => {
+                  e.preventDefault(); e.stopPropagation();
+                  // Sorted by a column: the manual order isn't visible, so a drop
+                  // just moves the task into this row's group.
+                  if (sorted) handleDropOnTarget(t.areaId, t.projectId || null);
+                  else reorderTask(draggedTaskId, t.id);
+                }}
               >
                 <td className={`td-title ${indent ? "td-indent" : ""}`} onDoubleClick={() => { if (editingTitleId !== t.id) setEditingTitleId(t.id); }}>
                   <div className="td-title-row">
@@ -5642,6 +5726,13 @@ export default function TaskApp() {
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         thead th { text-align: left; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); font-weight: 600; padding: 8px 16px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.012); }
         .area-columns-header { margin-bottom: -1px; }
+        th.th-sort { cursor: pointer; user-select: none; }
+        th.th-sort:hover { color: var(--text); }
+        .th-sort-label { display: inline-flex; align-items: center; gap: 4px; }
+        .th-sort-arrow { font-size: 8px; opacity: 0; transition: opacity .12s; }
+        th.th-sort:hover .th-sort-arrow { opacity: .45; }
+        th.th-sort--on { color: var(--text); }
+        th.th-sort--on .th-sort-arrow { opacity: 1; color: var(--amber); }
         tbody tr { border-bottom: 1px solid var(--border); }
         tbody tr:last-child { border-bottom: none; }
         tbody tr { transition: background .1s; }
@@ -6612,8 +6703,11 @@ export default function TaskApp() {
         {visibleOrderedAreas.map((a) => (
           <div
             key={a.id}
-            className={`side-item ${selectedAreaId === a.id ? "side-item--active" : ""}`}
+            className={`side-item ${selectedAreaId === a.id ? "side-item--active" : ""} ${taskDragActive ? "side-item--droppable" : ""} ${dragOverKey === `side-area-${a.id}` ? "side-item--dropping" : ""}`}
             onClick={() => { if (renamingAreaId !== a.id) selectArea(a.id); }}
+            onDragOver={(e) => { if (!taskDragActive) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (dragOverKey !== `side-area-${a.id}`) setDragOverKey(`side-area-${a.id}`); }}
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverKey((k) => (k === `side-area-${a.id}` ? null : k)); }}
+            onDrop={(e) => { e.preventDefault(); e.stopPropagation(); moveTaskToArea(draggedTaskId || calDragTaskId, a.id); }}
           >
             {renamingAreaId === a.id ? (
               <input
@@ -6923,11 +7017,11 @@ export default function TaskApp() {
                           {colGroupFor(false)}
                           <thead>
                             <tr>
-                              <th>{tr("Tarea")}</th>
+                              {sortTh("title", tr("Tarea"))}
                               <th className="col-center">{tr("Detalle")}</th>
-                              <th className="col-center">{tr("Estado")}</th>
-                              <th className="col-center">{tr("Prioridad")}</th>
-                              <th className="col-center">{tr("Fecha")}</th>
+                              {sortTh("status", tr("Estado"), "col-center")}
+                              {sortTh("priority", tr("Prioridad"), "col-center")}
+                              {sortTh("date", tr("Fecha"), "col-center")}
                               <th></th>
                             </tr>
                           </thead>
