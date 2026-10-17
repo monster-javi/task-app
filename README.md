@@ -45,6 +45,6 @@ Hermana de [Gastos App](https://github.com/monster-javi/gastos-app): comparten e
 
 <p align="center">
   Si te sirve y querés bancar el proyecto, ¡invitame un cafecito! ☕
-  <br><br>
-  <a href="https://cafecito.app/monsterjavi"><img src="https://cdn.cafecito.app/imgs/buttons/button_2.svg" alt="Invitame un café en cafecito.app" height="29"></a>
+  <br>
+  <a href="https://cafecito.app/monsterjavi"><img src="https://cdn.cafecito.app/imgs/buttons/button_2.svg" alt="Invitame un café en cafecito.app" height="32"></a>
 </p>
